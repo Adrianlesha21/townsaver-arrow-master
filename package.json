@@ -1,0 +1,21 @@
+{
+  "name": "townsaver",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5173",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 5173",
+    "test": "vitest run",
+    "verify:chrome": "tsx scripts/verify_chrome.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "playwright-core": "^1.49.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0",
+    "vitest": "^2.1.0"
+  }
+}

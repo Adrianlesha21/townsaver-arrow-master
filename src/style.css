@@ -1,0 +1,1028 @@
+/* ==========================================================================
+   TOWNSAVER — ARCADE CABINET RETRO THEME
+   Desktop Chrome Optimized (1280x800) • Pixelated 240x320 Canvas Playfield
+   ========================================================================== */
+
+:root {
+  /* Color Palette matching Reference Sheets & Arcade Bezel */
+  --bg-void: #0b0c10;
+  --cabinet-outer: #16171d;
+  --cabinet-inner: #2b2d33; /* Slate backdrop from Gemini reference sheets */
+  --cabinet-dark: #191a20;
+  --panel-bg: #202229;
+  --panel-card: #272931;
+  --panel-border: #383c48;
+  --panel-border-bright: #4e5364;
+  --panel-border-dark: #15161a;
+
+  /* Accent Colors */
+  --accent-gold: #f5b82e;       /* Adrian trim, crown, victory, high score */
+  --accent-gold-dark: #c48a14;
+  --accent-gold-glow: rgba(245, 184, 46, 0.45);
+  --accent-cyan: #3a8ee6;       /* Weapon box outline, Blue-Iron shine */
+  --accent-cyan-light: #64b5f6;
+  --accent-cyan-glow: rgba(58, 142, 230, 0.4);
+  --accent-crimson: #e62234;    /* Active hearts, danger alerts */
+  --accent-crimson-glow: rgba(230, 34, 52, 0.5);
+  --accent-lost-heart: #2e2638; /* Lost hearts, dark purple charcoal */
+  --accent-orange: #ff6b35;     /* Great Arrow heavy blast flash */
+  --accent-purple: #9c27b0;     /* Winged bat violet & Queen gown */
+  --accent-green: #4caf50;      /* Goblin green, clear status, power LED */
+
+  /* Text & Labels */
+  --text-white: #f5f6fa;
+  --text-silver: #b8bccb;
+  --text-muted: #6f7487;
+  --text-gold: #ffd700;
+  --text-cyan: #70c4ff;
+
+  /* Dimensions */
+  --canvas-width: 480px;  /* 2x native 240px */
+  --canvas-height: 640px; /* 2x native 320px */
+  --bezel-width: 320px;
+}
+
+/* --------------------------------------------------------------------------
+   RESET & FOUNDATION
+   -------------------------------------------------------------------------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html, body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-void);
+  background-image: 
+    radial-gradient(circle at 50% 50%, #1a1c24 0%, #0a0b0e 100%);
+  color: var(--text-white);
+  font-family: 'Press Start 2P', 'VT323', 'DejaVu Sans Mono', 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* --------------------------------------------------------------------------
+   ARCADE CABINET SHELL CONTAINER (1280x800 Desktop Chrome Target)
+   -------------------------------------------------------------------------- */
+.arcade-cabinet {
+  width: 1280px;
+  height: 800px;
+  max-width: 100vw;
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--cabinet-inner);
+  border: 4px solid #363945;
+  border-top-color: #4a4e5e;
+  border-bottom-color: #1a1c22;
+  box-shadow: 
+    0 0 60px rgba(0, 0, 0, 0.95),
+    inset 0 0 25px rgba(0, 0, 0, 0.8),
+    0 0 0 2px #111215;
+  position: relative;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   CABINET MARQUEE (TOP HEADER)
+   -------------------------------------------------------------------------- */
+.cabinet-marquee {
+  height: 44px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #1b202c 0%, #11141c 100%);
+  border-bottom: 3px solid var(--accent-gold);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  position: relative;
+  z-index: 10;
+}
+
+.marquee-decor-left,
+.marquee-decor-right {
+  color: var(--accent-gold);
+  font-size: 9px;
+  letter-spacing: 4px;
+  text-shadow: 0 0 8px var(--accent-gold-glow);
+}
+
+.marquee-center {
+  text-align: center;
+}
+
+.marquee-title {
+  font-size: 17px;
+  letter-spacing: 3px;
+  font-weight: 900;
+  text-shadow: 
+    2px 2px 0 #000,
+    -1px -1px 0 #000,
+    0 0 10px rgba(255, 255, 255, 0.5);
+  margin-bottom: 1px;
+}
+
+.title-town {
+  color: var(--accent-cyan-light);
+  text-shadow: 0 0 12px var(--accent-cyan-glow), 2px 2px 0 #000;
+}
+
+.title-saver {
+  color: var(--accent-gold);
+  text-shadow: 0 0 12px var(--accent-gold-glow), 2px 2px 0 #000;
+}
+
+.marquee-subtitle {
+  font-size: 7.5px;
+  letter-spacing: 2px;
+  color: var(--text-silver);
+  opacity: 0.85;
+}
+
+/* --------------------------------------------------------------------------
+   CABINET CHASSIS (MAIN WORK AREA: 3-COLUMN LAYOUT)
+   -------------------------------------------------------------------------- */
+.cabinet-chassis {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: var(--bezel-width) auto var(--bezel-width);
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 16px;
+  background-color: var(--cabinet-inner);
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 20px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   SIDE BEZELS (LEFT & RIGHT PANELS)
+   -------------------------------------------------------------------------- */
+.bezel {
+  height: 694px;
+  max-height: 694px;
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  border-top-color: var(--panel-border-bright);
+  border-bottom-color: var(--panel-border-dark);
+  box-shadow: 
+    inset 1px 1px 0 rgba(255, 255, 255, 0.08),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.6),
+    0 4px 15px rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Custom Bezel Scrollbars */
+.bezel::-webkit-scrollbar {
+  width: 4px;
+}
+.bezel::-webkit-scrollbar-track {
+  background: var(--panel-border-dark);
+}
+.bezel::-webkit-scrollbar-thumb {
+  background: var(--panel-border-bright);
+  border-radius: 2px;
+}
+
+/* Bezel Rivets / Industrial Screws */
+.bezel-rivet {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #505565;
+  border-radius: 50%;
+  border: 1px solid #1a1b20;
+  box-shadow: inset 1px 1px 1px #8088a0, 1px 1px 2px rgba(0, 0, 0, 0.6);
+  z-index: 5;
+  pointer-events: none;
+}
+.bezel-rivet.top-left     { top: 4px; left: 4px; }
+.bezel-rivet.top-right    { top: 4px; right: 4px; }
+.bezel-rivet.bottom-left  { bottom: 4px; left: 4px; }
+.bezel-rivet.bottom-right { bottom: 4px; right: 4px; }
+
+/* --------------------------------------------------------------------------
+   BEZEL CARDS (SECTION CONTAINERS)
+   -------------------------------------------------------------------------- */
+.bezel-card {
+  background: var(--panel-card);
+  border: 1px solid var(--panel-border);
+  border-radius: 3px;
+  padding: 8px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.4);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.header-icon {
+  font-size: 10px;
+}
+
+.card-title {
+  font-size: 8.5px;
+  letter-spacing: 1.2px;
+  color: var(--accent-gold);
+  font-weight: 700;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* --------------------------------------------------------------------------
+   LEFT BEZEL: WEAPON ARSENAL
+   -------------------------------------------------------------------------- */
+.weapons-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.weapon-card {
+  display: grid;
+  grid-template-columns: 26px 1fr 44px;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 7px;
+  background: #1c1e24;
+  border: 1.5px solid var(--panel-border);
+  border-radius: 3px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-white);
+  transition: all 0.15s ease-in-out;
+  outline: none;
+  font-family: inherit;
+}
+
+.weapon-card:hover {
+  background: #242730;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 8px var(--accent-cyan-glow);
+}
+
+/* Active Equipped Weapon (matches Gemini reference sheet cyan selection) */
+.weapon-card.active {
+  background: #162434;
+  border-color: var(--accent-cyan);
+  box-shadow: 
+    inset 0 0 8px rgba(58, 142, 230, 0.3),
+    0 0 10px var(--accent-cyan-glow);
+}
+
+.weapon-card.active .weapon-name {
+  color: var(--accent-cyan-light);
+  text-shadow: 0 0 6px var(--accent-cyan-glow);
+}
+
+.weapon-key-badge {
+  font-size: 8.5px;
+  color: var(--accent-gold);
+  font-weight: bold;
+}
+
+.weapon-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5px;
+  overflow: hidden;
+}
+
+.weapon-name {
+  font-size: 8.5px;
+  letter-spacing: 0.8px;
+  color: var(--text-white);
+  white-space: nowrap;
+}
+
+.weapon-tag {
+  font-size: 6.5px;
+  color: var(--accent-gold);
+}
+
+.weapon-desc {
+  font-size: 6px;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+
+.weapon-ammo {
+  text-align: center;
+  font-size: 9px;
+  font-weight: bold;
+  color: var(--accent-cyan-light);
+  background: #111317;
+  border: 1px solid var(--panel-border);
+  border-radius: 2px;
+  padding: 2px;
+}
+
+.weapon-ammo.unlimited {
+  font-size: 13px;
+  color: var(--accent-gold);
+}
+
+.weapon-ammo .ammo-lbl {
+  display: block;
+  font-size: 5px;
+  color: var(--text-muted);
+}
+
+.weapon-cycle-hint {
+  margin-top: 5px;
+  text-align: center;
+  font-size: 6.5px;
+  color: var(--text-muted);
+}
+
+.hint-key {
+  color: var(--accent-gold);
+  background: #191b22;
+  padding: 1px 4px;
+  border-radius: 2px;
+  border: 1px solid var(--panel-border);
+}
+
+/* --------------------------------------------------------------------------
+   LEFT BEZEL: CABINET CONTROLS
+   -------------------------------------------------------------------------- */
+.controls-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.control-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2.5px 0;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.08);
+}
+
+.control-row:last-child {
+  border-bottom: none;
+}
+
+.control-keys {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.key-pill {
+  font-size: 6px;
+  color: var(--accent-gold);
+  background: #181920;
+  border: 1px solid #454958;
+  border-bottom: 2px solid #282a33;
+  border-radius: 2px;
+  padding: 1px 4px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.control-action {
+  font-size: 6.5px;
+  color: var(--text-silver);
+  letter-spacing: 0.5px;
+}
+
+/* Big Arcade Fire Pushbutton */
+.arcade-fire-button {
+  background: linear-gradient(180deg, #e62234 0%, #9e1422 100%);
+  border: 2px solid #ff6b7b;
+  border-bottom: 4px solid #630a13;
+  border-radius: 4px;
+  color: #fff;
+  padding: 7px 6px;
+  font-family: inherit;
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  box-shadow: 0 0 12px rgba(230, 34, 52, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: all 0.1s;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.arcade-fire-button:hover {
+  background: linear-gradient(180deg, #ff3347 0%, #b81727 100%);
+  box-shadow: 0 0 16px rgba(230, 34, 52, 0.65);
+}
+
+.arcade-fire-button:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+  box-shadow: 0 0 6px rgba(230, 34, 52, 0.3);
+}
+
+/* Left Bezel Action Buttons */
+.bezel-actions-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 5px;
+  margin-top: auto;
+}
+
+.arcade-action-btn {
+  background: linear-gradient(180deg, #323644 0%, #1c1d24 100%);
+  border: 1px solid #4a5064;
+  border-bottom: 3px solid #14151a;
+  border-radius: 3px;
+  color: var(--text-white);
+  padding: 5px 2px;
+  font-size: 6.5px;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.1s;
+}
+
+.arcade-action-btn:hover {
+  background: linear-gradient(180deg, #3f4557 0%, #242630 100%);
+  border-color: var(--accent-gold);
+}
+
+.arcade-action-btn:active {
+  transform: translateY(2px);
+  border-bottom-width: 1px;
+}
+
+.arcade-action-btn .btn-icon {
+  font-size: 9px;
+}
+
+/* --------------------------------------------------------------------------
+   CENTER FRAME: CRT MONITOR CASING & 240x320 PLAYFIELD
+   -------------------------------------------------------------------------- */
+.center-frame-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.crt-monitor-casing {
+  width: calc(var(--canvas-width) + 20px);
+  background: #15161c;
+  border: 3px solid #2c303c;
+  border-top-color: #3f4454;
+  border-bottom-color: #101115;
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 
+    0 0 30px rgba(0, 0, 0, 0.9),
+    inset 0 0 15px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.crt-brand-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #232630;
+}
+
+.crt-brand-text {
+  font-size: 6.5px;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+}
+
+.crt-led-power {
+  width: 6px;
+  height: 6px;
+  background: #00ff66;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #00ff66;
+  animation: ledPulse 2s infinite alternate ease-in-out;
+}
+
+@keyframes ledPulse {
+  0% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+/* Recessed CRT Screen Housing */
+.crt-screen-housing {
+  position: relative;
+  width: var(--canvas-width);
+  height: var(--canvas-height);
+  background: #14161b;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 
+    inset 0 0 30px rgba(0, 0, 0, 0.95),
+    0 0 12px rgba(58, 142, 230, 0.15);
+  border: 2px solid #252834;
+  margin: 5px 0;
+  flex-shrink: 0;
+}
+
+/* Crisp Pixelated Game Canvas */
+#game-canvas {
+  width: var(--canvas-width);
+  height: var(--canvas-height);
+  display: block;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-crisp-edges;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background-color: #1a1c22;
+}
+
+/* CRT Scanlines Overlay */
+.crt-scanline-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%,
+    rgba(0, 0, 0, 0.25) 50%
+  );
+  background-size: 100% 4px;
+  z-index: 5;
+  opacity: 0.55;
+}
+
+/* CRT Glass Vignette & Curved Bezel Reflection */
+.crt-vignette {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  box-shadow: inset 0 0 45px rgba(0, 0, 0, 0.75);
+  border-radius: 4px;
+  z-index: 6;
+}
+
+/* Bottom Monitor Trim */
+.crt-bottom-trim {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 4px;
+  border-top: 1px solid #232630;
+}
+
+.crt-screw {
+  width: 5px;
+  height: 5px;
+  background: #3f4454;
+  border-radius: 50%;
+  box-shadow: inset 1px 1px 1px #707790;
+}
+
+.crt-vent-slots {
+  display: flex;
+  gap: 4px;
+}
+
+.crt-vent-slots span {
+  width: 12px;
+  height: 2px;
+  background: #111216;
+  border-bottom: 1px solid #2a2e3a;
+}
+
+.crt-mon-status {
+  font-size: 6.5px;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   RIGHT BEZEL: THE QUEEN SANCTUARY, HEARTS, SCORE, STAGE SELECTOR
+   -------------------------------------------------------------------------- */
+.queen-status-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #1a1c22;
+  border: 1px solid var(--panel-border);
+  border-radius: 3px;
+  padding: 5px;
+  margin-bottom: 6px;
+}
+
+.queen-portrait-wrapper {
+  width: 36px;
+  height: 48px;
+  background: #121318;
+  border: 1.5px solid var(--accent-gold);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 8px var(--accent-gold-glow);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.queen-portrait-canvas {
+  width: 36px;
+  height: 48px;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+}
+
+.queen-mood-meta {
+  flex: 1;
+}
+
+.queen-mood-title {
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  color: var(--accent-gold);
+  text-shadow: 0 0 6px var(--accent-gold-glow);
+  margin-bottom: 2px;
+}
+
+/* Queen Mood Color Variations */
+.queen-mood-title.watching   { color: var(--accent-gold); }
+.queen-mood-title.cheering   { color: var(--accent-green); text-shadow: 0 0 6px rgba(76, 175, 80, 0.6); }
+.queen-mood-title.praying    { color: #ffaa00; text-shadow: 0 0 6px rgba(255, 170, 0, 0.6); }
+.queen-mood-title.distressed { color: var(--accent-crimson); text-shadow: 0 0 8px var(--accent-crimson-glow); }
+
+.queen-mood-desc {
+  font-size: 6px;
+  color: var(--text-silver);
+  line-height: 1.3;
+}
+
+/* Sanctuary Hearts */
+.sanctuary-hearts-block {
+  background: #1a1c22;
+  border: 1px solid var(--panel-border);
+  border-radius: 3px;
+  padding: 5px;
+}
+
+.block-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 6px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  margin-bottom: 3px;
+}
+
+.hearts-count {
+  color: var(--accent-crimson);
+  font-weight: bold;
+}
+
+.hearts-row {
+  display: flex;
+  justify-content: space-around;
+  padding: 2px 0;
+}
+
+.heart-icon {
+  font-size: 15px;
+  line-height: 1;
+  transition: transform 0.2s;
+}
+
+.heart-icon.active {
+  color: var(--accent-crimson);
+  text-shadow: 0 0 8px var(--accent-crimson-glow);
+}
+
+.heart-icon.empty {
+  color: var(--accent-lost-heart);
+  opacity: 0.55;
+  text-shadow: none;
+}
+
+/* Score Display */
+.score-display-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.score-box {
+  background: #181920;
+  border: 1px solid var(--panel-border);
+  border-radius: 3px;
+  padding: 5px;
+  text-align: center;
+}
+
+.score-label {
+  font-size: 6px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+
+.score-digits {
+  font-size: 10px;
+  color: var(--accent-cyan-light);
+  letter-spacing: 1.5px;
+  font-weight: bold;
+}
+
+.score-digits.gold {
+  color: var(--accent-gold);
+  text-shadow: 0 0 6px var(--accent-gold-glow);
+}
+
+/* Stage Selector */
+.stage-info-banner {
+  background: #1a1c22;
+  border: 1px solid var(--panel-border);
+  border-left: 3px solid var(--accent-gold);
+  border-radius: 2px;
+  padding: 4px 6px;
+  margin-bottom: 5px;
+}
+
+.stage-banner-num {
+  font-size: 6.5px;
+  color: var(--accent-gold);
+  margin-bottom: 2px;
+}
+
+.stage-banner-name {
+  font-size: 8px;
+  color: var(--text-white);
+  letter-spacing: 0.5px;
+}
+
+.stage-select-controls {
+  margin-bottom: 5px;
+}
+
+.selector-label {
+  display: block;
+  font-size: 6px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.stage-select-dropdown {
+  width: 100%;
+  background: #181a20;
+  border: 1px solid var(--panel-border);
+  border-radius: 3px;
+  color: var(--accent-cyan-light);
+  font-family: inherit;
+  font-size: 7px;
+  padding: 4px;
+  cursor: pointer;
+  outline: none;
+}
+
+.stage-select-dropdown:focus {
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 6px var(--accent-gold-glow);
+}
+
+.stage-quick-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.stage-nav-btn {
+  background: #232630;
+  border: 1px solid var(--panel-border);
+  border-radius: 2px;
+  color: var(--text-silver);
+  font-family: inherit;
+  font-size: 6.5px;
+  padding: 4px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.stage-nav-btn:hover {
+  background: #2d313e;
+  color: var(--accent-gold);
+  border-color: var(--accent-gold);
+}
+
+/* Story Mission Chronicle Panel */
+.story-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.story-act-badge {
+  font-size: 6px;
+  color: var(--accent-cyan-light);
+  letter-spacing: 0.8px;
+}
+
+.story-chapter-title {
+  font-size: 7.5px;
+  color: var(--accent-gold);
+  font-weight: bold;
+}
+
+.story-objective-pill {
+  font-size: 6.5px;
+  padding: 3px 5px;
+  border-radius: 2px;
+  background: #172334;
+  border: 1px solid var(--accent-cyan);
+  color: #f8fafc;
+  letter-spacing: 0.4px;
+}
+
+.story-objective-pill.unlocked {
+  background: #143022;
+  border-color: #4ade80;
+  color: #86efac;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.35);
+}
+
+.story-lore-text {
+  font-size: 6px;
+  color: var(--text-silver);
+  line-height: 1.35;
+  background: #161820;
+  border: 1px solid var(--panel-border);
+  border-radius: 2px;
+  padding: 4px 5px;
+}
+
+.story-btn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+#game-canvas {
+  cursor: crosshair;
+}
+
+/* Hazards Panel */
+.hazards-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hazard-summary-row {
+  display: flex;
+  gap: 4px;
+  font-size: 6px;
+  line-height: 1.3;
+}
+
+.hazard-tag.danger {
+  color: var(--accent-crimson);
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.hazard-desc {
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   CABINET FOOTER
+   -------------------------------------------------------------------------- */
+.cabinet-footer {
+  height: 32px;
+  flex-shrink: 0;
+  background: #121318;
+  border-top: 2px solid #2a2d38;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  font-size: 6.5px;
+  color: var(--text-muted);
+}
+
+.footer-coin-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coin-insert-glow {
+  color: #ffaa00;
+  animation: blinkFreePlay 1.2s infinite;
+}
+
+@keyframes blinkFreePlay {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.coin-sub {
+  font-size: 5.5px;
+  color: #555b6e;
+}
+
+.footer-status-msg {
+  color: var(--text-silver);
+  letter-spacing: 0.5px;
+}
+
+.footer-credits {
+  font-size: 6px;
+  color: #4b5060;
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE ADJUSTMENTS FOR VIEWPORTS BELOW 1280x800
+   -------------------------------------------------------------------------- */
+@media (max-height: 760px) {
+  .cabinet-marquee { height: 38px; }
+  .marquee-title { font-size: 15px; }
+  .center-frame-container .crt-monitor-casing {
+    transform: scale(0.92);
+    transform-origin: center;
+  }
+}
+
+@media (max-width: 1180px) {
+  .arcade-cabinet {
+    max-width: 100vw;
+  }
+  .cabinet-chassis {
+    grid-template-columns: 260px auto 260px;
+    gap: 8px;
+    padding: 6px;
+  }
+}
+
+.marquee-download-btn {
+  background: linear-gradient(180deg, #facc15 0%, #ca8a04 100%);
+  color: #0b0c10;
+  border: 1.5px solid #fef08a;
+  border-bottom: 3px solid #854d0e;
+  border-radius: 3px;
+  padding: 4px 9px;
+  font-family: inherit;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.35);
+  transition: transform 0.1s ease, filter 0.12s ease;
+}
+
+.marquee-download-btn:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 0 14px rgba(250, 204, 21, 0.65);
+}
+
+.marquee-download-btn:active {
+  transform: translateY(1px);
+  border-bottom-width: 1.5px;
+}
+

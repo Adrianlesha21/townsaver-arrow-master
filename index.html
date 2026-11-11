@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Townsaver — The Arrow Master (v2.0 Story &amp; Castle Assault Edition)</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='2' fill='%230c1220'/%3E%3Cpath d='M8 2l4 5H9v7H7V7H4z' fill='%23facc15'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="arcade-cabinet" class="arcade-cabinet">
+    <!-- Top Cabinet Marquee Header -->
+    <header class="cabinet-marquee">
+      <div class="marquee-decor-left">◆ ◆ ◆</div>
+      <div class="marquee-center">
+        <h1 class="marquee-title">
+          <span class="title-town">TOWN</span><span class="title-saver">SAVER</span>
+        </h1>
+        <div class="marquee-subtitle">THE ARROW MASTER • 2D CASTLE ASSAULT &amp; QUEEN RESCUE</div>
+      </div>
+      <div class="marquee-decor-right">
+        <button class="marquee-download-btn" id="btn-download-html" title="Download standalone Townsaver v2.0 HTML file to your Chrome Downloads folder">
+          ⬇ DOWNLOAD v2.0 (.HTML)
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Cabinet Chassis: Left Bezel, Center Playfield, Right Bezel -->
+    <main class="cabinet-chassis">
+      
+      <!-- LEFT BEZEL: Weapon Arsenal, 2D Controls Manual & Arcade Buttons -->
+      <aside class="bezel bezel-left" id="bezel-left">
+        <div class="bezel-rivet top-left"></div>
+        <div class="bezel-rivet top-right"></div>
+        <div class="bezel-rivet bottom-left"></div>
+        <div class="bezel-rivet bottom-right"></div>
+
+        <!-- Section: Weapon Arsenal (1/2/3/Tab) -->
+        <section class="bezel-card arsenal-panel" id="arsenal-panel">
+          <div class="card-header">
+            <span class="header-icon">⚔</span>
+            <h2 class="card-title">WEAPON ARSENAL</h2>
+          </div>
+          <div class="weapons-grid">
+            <!-- Weapon 1: Single Arrow (Standard) -->
+            <button class="weapon-card active" id="btn-weapon-1" data-weapon="single" title="Press [1] to equip">
+              <div class="weapon-key-badge">[1]</div>
+              <div class="weapon-info">
+                <div class="weapon-name">SINGLE ARROW</div>
+                <div class="weapon-tag">STANDARD • 1 DMG</div>
+                <div class="weapon-desc">Fast 8-way / 360° shot, infinite quiver.</div>
+              </div>
+              <div class="weapon-ammo unlimited" id="ammo-single">∞</div>
+            </button>
+
+            <!-- Weapon 2: Double Shot -->
+            <button class="weapon-card" id="btn-weapon-2" data-weapon="double" title="Press [2] to equip">
+              <div class="weapon-key-badge">[2]</div>
+              <div class="weapon-info">
+                <div class="weapon-name">DOUBLE SHOT</div>
+                <div class="weapon-tag">SPREAD • 2x1 DMG</div>
+                <div class="weapon-desc">Twin arrows. Sweeps Bats &amp; 2-HP Goblins!</div>
+              </div>
+              <div class="weapon-ammo" id="ammo-double">
+                <span class="ammo-val">5</span><span class="ammo-lbl">SHOTS</span>
+              </div>
+            </button>
+
+            <!-- Weapon 3: Great Arrow (Heavy) -->
+            <button class="weapon-card" id="btn-weapon-3" data-weapon="heavy" title="Press [3] to equip">
+              <div class="weapon-key-badge">[3]</div>
+              <div class="weapon-info">
+                <div class="weapon-name">GREAT ARROW</div>
+                <div class="weapon-tag">HEAVY BLAST • 3 DMG</div>
+                <div class="weapon-desc">Piercing Shatter! Opens Palisade paths!</div>
+              </div>
+              <div class="weapon-ammo" id="ammo-heavy">
+                <span class="ammo-val">2</span><span class="ammo-lbl">SHOTS</span>
+              </div>
+            </button>
+          </div>
+          <div class="weapon-cycle-hint">
+            <span class="hint-key">TAB</span> or <span class="hint-key">Q</span> Quick-Cycle Weapons
+          </div>
+        </section>
+
+        <!-- Section: 2D Free-Roam & Aiming Controls Manual -->
+        <section class="bezel-card controls-panel" id="controls-panel">
+          <div class="card-header">
+            <span class="header-icon">🎮</span>
+            <h2 class="card-title">ARROW MASTER CONTROLS</h2>
+          </div>
+          <div class="controls-list">
+            <div class="control-row">
+              <div class="control-keys">
+                <span class="key-pill">W</span>
+                <span class="key-pill">A</span>
+                <span class="key-pill">S</span>
+                <span class="key-pill">D</span>
+                <span class="key-pill">ARROWS</span>
+              </div>
+              <div class="control-action">MOVE 8-WAY</div>
+            </div>
+            <div class="control-row">
+              <div class="control-keys">
+                <span class="key-pill">MOUSE</span>
+                <span class="key-pill">CLICK</span>
+              </div>
+              <div class="control-action">360° AIM &amp; FIRE</div>
+            </div>
+            <div class="control-row">
+              <div class="control-keys">
+                <span class="key-pill">SPACE</span>
+                <span class="key-pill">5</span>
+                <span class="key-pill">E</span>
+                <span class="key-pill">ENTER</span>
+              </div>
+              <div class="control-action">SHOOT FACING</div>
+            </div>
+            <div class="control-row">
+              <div class="control-keys">
+                <span class="key-pill">1</span>
+                <span class="key-pill">2</span>
+                <span class="key-pill">3</span>
+                <span class="key-pill">TAB</span>
+              </div>
+              <div class="control-action">SELECT WEAPON</div>
+            </div>
+            <div class="control-row">
+              <div class="control-keys">
+                <span class="key-pill">B</span>
+                <span class="key-pill">P</span>
+                <span class="key-pill">R</span>
+                <span class="key-pill">M</span>
+              </div>
+              <div class="control-action">STORY/PAUSE/RST</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Big Retro Arcade Fire Pushbutton -->
+        <button class="arcade-fire-button" id="btn-fire" title="Fire Arrow / Advance Story [SPACE]">
+          <span class="fire-btn-glow"></span>
+          <span class="fire-btn-label">🔴 FIRE / ADVANCE [SPACE]</span>
+        </button>
+
+        <!-- Cabinet Action Buttons -->
+        <div class="bezel-actions-bar">
+          <button class="arcade-action-btn" id="btn-pause" title="Pause Game [P]">
+            <span class="btn-icon">⏸</span> PAUSE (P)
+          </button>
+          <button class="arcade-action-btn" id="btn-restart" title="Restart Stage [R]">
+            <span class="btn-icon">🔄</span> RESTART (R)
+          </button>
+          <button class="arcade-action-btn" id="btn-mute" title="Toggle Sound [M]">
+            <span class="btn-icon" id="mute-icon">🔊</span> <span id="mute-label">MUTE (M)</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- CENTER FRAME: CRT Monitor Bezel & 240x320 Canvas -->
+      <section class="center-frame-container" id="center-frame-container">
+        <div class="crt-monitor-casing">
+          <div class="crt-brand-strip">
+            <span class="crt-brand-text">ARROW MASTER CRT • 240×320 NATIVE</span>
+            <div class="crt-led-power" id="crt-power-led" title="Power Indicator"></div>
+          </div>
+
+          <div class="crt-screen-housing" id="crt-screen-housing">
+            <div class="crt-scanline-overlay"></div>
+            <div class="crt-vignette"></div>
+            <canvas id="game-canvas" width="240" height="320" aria-label="Townsaver Game Playfield"></canvas>
+          </div>
+
+          <div class="crt-bottom-trim">
+            <div class="crt-screw screw-left"></div>
+            <div class="crt-vent-slots">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <div class="crt-mon-status" id="crt-fps-counter">60 FPS DETERMINISTIC</div>
+            <div class="crt-screw screw-right"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT BEZEL: Queen Sanctum Status, Story Chronicle, Score & Stage Selector -->
+      <aside class="bezel bezel-right" id="bezel-right">
+        <div class="bezel-rivet top-left"></div>
+        <div class="bezel-rivet top-right"></div>
+        <div class="bezel-rivet bottom-left"></div>
+        <div class="bezel-rivet bottom-right"></div>
+
+        <!-- Section: The Queen Top Sanctum & Hearts -->
+        <section class="bezel-card queen-panel" id="queen-panel">
+          <div class="card-header">
+            <span class="header-icon">👑</span>
+            <h2 class="card-title">QUEEN AURELIA (TOP SANCTUM)</h2>
+          </div>
+          <div class="queen-status-card">
+            <div class="queen-portrait-wrapper" id="queen-portrait-wrapper">
+              <canvas id="queen-portrait-canvas" class="queen-portrait-canvas" width="36" height="48"></canvas>
+            </div>
+            <div class="queen-mood-meta">
+              <div class="queen-mood-title" id="queen-mood-title">WATCHING</div>
+              <div class="queen-mood-desc" id="queen-mood-desc">Awaits Adrian at the Top Royal Sanctum!</div>
+            </div>
+          </div>
+
+          <div class="sanctuary-hearts-block">
+            <div class="block-label">
+              <span>ARROW MASTER HEARTS</span>
+              <span class="hearts-count" id="hearts-count-text">4 / 5</span>
+            </div>
+            <div class="hearts-row" id="hearts-row">
+              <span class="heart-icon active" data-heart="1">♥</span>
+              <span class="heart-icon active" data-heart="2">♥</span>
+              <span class="heart-icon active" data-heart="3">♥</span>
+              <span class="heart-icon active" data-heart="4">♥</span>
+              <span class="heart-icon empty" data-heart="5">♡</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section: Story Chronicle & Live Rescue Objective -->
+        <section class="bezel-card story-panel" id="story-panel">
+          <div class="card-header">
+            <span class="header-icon">📖</span>
+            <h2 class="card-title">STORY MISSION</h2>
+          </div>
+          <div class="story-act-badge" id="story-act-badge">ACT I • THE OUTER BAILEY</div>
+          <div class="story-chapter-title" id="story-chapter-title">CH.1 — MEADOW GATEWAY</div>
+          <div class="story-objective-pill" id="story-objective-pill">⚔ DEFEAT RAIDERS TO UNLOCK SANCTUM</div>
+          <div class="story-lore-text" id="story-lore-text">
+            Defeat all Ironfang guards in the maze to unlock the Top Sanctum Portcullis, then walk up to rescue Queen Aurelia!
+          </div>
+          <div class="story-btn-row">
+            <button class="stage-nav-btn" id="btn-prologue" title="Watch Opening Story Prologue">📖 PROLOGUE</button>
+            <button class="stage-nav-btn" id="btn-briefing" title="Open Stage Mission Briefing [B]">📜 BRIEFING (B)</button>
+          </div>
+        </section>
+
+        <!-- Section: Score & Statistics -->
+        <section class="bezel-card score-panel" id="score-panel">
+          <div class="card-header">
+            <span class="header-icon">🏆</span>
+            <h2 class="card-title">SCORE &amp; STATS</h2>
+          </div>
+          <div class="score-display-grid">
+            <div class="score-box current-score-box">
+              <div class="score-label">CURRENT SCORE</div>
+              <div class="score-digits" id="current-score">000000</div>
+            </div>
+            <div class="score-box high-score-box">
+              <div class="score-label">ALL-TIME HIGH</div>
+              <div class="score-digits gold" id="high-score">000000</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section: Stage Selector & Progression -->
+        <section class="bezel-card stage-panel" id="stage-panel">
+          <div class="card-header">
+            <span class="header-icon">🏰</span>
+            <h2 class="card-title">CASTLE SECTOR SELECT</h2>
+          </div>
+          <div class="stage-info-banner">
+            <div class="stage-banner-num" id="stage-display-num">STAGE 01</div>
+            <div class="stage-banner-name" id="stage-display-name">MEADOW GATEWAY</div>
+          </div>
+
+          <div class="stage-select-controls">
+            <label for="stage-select" class="selector-label">CHOOSE CASTLE STAGE:</label>
+            <select id="stage-select" class="stage-select-dropdown">
+              <option value="1">STAGE 1 - MEADOW GATEWAY</option>
+              <option value="2">STAGE 2 - GOBLIN PATROL</option>
+              <option value="3">STAGE 3 - TIMBER BARRICADE</option>
+              <option value="4">STAGE 4 - BLUE-IRON CRAGS</option>
+              <option value="5">STAGE 5 - BAILEY KEEP (LV21)</option>
+              <option value="6">STAGE 6 - DUAL SIEGE DEPOT</option>
+              <option value="7">STAGE 7 - FLANKING HORDE</option>
+              <option value="8">STAGE 8 - TWIN CHANNELS (LV31)</option>
+              <option value="9">STAGE 9 - ROTATING REDOUBT</option>
+              <option value="10">STAGE 10 - SPLINTER CORRIDOR</option>
+              <option value="11">STAGE 11 - BELFRY BAT BARRAGE</option>
+              <option value="12">STAGE 12 - GARRISON SIEGE</option>
+              <option value="13">STAGE 13 - RIVETED MAZE</option>
+              <option value="14">STAGE 14 - THRONE APPROACH</option>
+              <option value="15">STAGE 15 - CITADEL LAST STAND</option>
+              <option value="16">STAGE 16+ - ENDLESS INVASION</option>
+            </select>
+          </div>
+
+          <div class="stage-quick-nav">
+            <button class="stage-nav-btn" id="btn-prev-stage" title="Previous Stage">◀ PREV</button>
+            <button class="stage-nav-btn" id="btn-next-stage" title="Next Stage">NEXT ▶</button>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <!-- Bottom Arcade Cabinet Footer -->
+    <footer class="cabinet-footer">
+      <div class="footer-coin-slot">
+        <span class="coin-insert-glow">● STORY CAMPAIGN ●</span>
+        <span class="coin-sub">15 CASTLE SECTORS + ENDLESS</span>
+      </div>
+      <div class="footer-status-msg" id="footer-status-msg">
+        MOVE: [WASD/ARROWS] • AIM &amp; SHOOT: [MOUSE CLICK / SPACE] • RESCUE QUEEN AT TOP!
+      </div>
+      <div class="footer-credits">
+        TOWNSAVER v2.0 • ARROW MASTER EDITION
+      </div>
+    </footer>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
