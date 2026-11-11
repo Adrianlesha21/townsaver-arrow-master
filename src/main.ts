@@ -135,6 +135,10 @@ const maxHearts = 5;
 let adrianFrame: AdrianFrameName = 'idle1';
 let adrianCol = 2;
 let terrainPalette: TerrainPalette = 'meadow';
+let lastBowFireTime = 0;
+let isPointerHeld = false;
+const BOW_MIN_TAP_GAP_MS = 85;
+const BOW_HOLD_FIRE_MS = 170;
 
 const QUEEN_MOOD_DESCRIPTIONS: Record<QueenMood, string> = {
   watching: 'Calls down counsel to Adrian from the Royal Sanctum.',
@@ -407,7 +411,7 @@ function canvasClientToLogical(clientX: number, clientY: number): { x: number; y
   return { x, y };
 }
 
-function handleFireOrAdvance(): void {
+function handleFireOrAdvance(isRepeat = false): void {
   const st = engine.getState();
   if (
     st.status === 'prologue' ||
@@ -416,12 +420,27 @@ function handleFireOrAdvance(): void {
     st.status === 'stage_clear' ||
     st.status === 'victory_campaign'
   ) {
+    if (isRepeat) return;
     engine.advanceStory();
     syncFromEngine();
     syncBezelDOM();
     if (ctx) renderPlayfield();
     updateDevHook();
     return;
+  }
+
+  const now = performance.now();
+  const minGap = isRepeat ? BOW_HOLD_FIRE_MS : BOW_MIN_TAP_GAP_MS;
+  if (now - lastBowFireTime < minGap) return;
+  lastBowFireTime = now;
+
+  if (
+    st.queenCalloutTimer &&
+    st.queenCalloutTimer > 0.45 &&
+    st.hearts >= 2 &&
+    !st.sanctum.unlocked
+  ) {
+    st.queenCalloutTimer = 0.45;
   }
 
   engine.fireWeapon(activeWeapon);
@@ -491,8 +510,9 @@ function setupInputListeners(): void {
       e.code === 'KeyE'
     ) {
       e.preventDefault();
+      pressedKeys.add(e.code);
       lastKeyPressed = `FIRE(${e.code})`;
-      handleFireOrAdvance();
+      handleFireOrAdvance(e.repeat);
     }
 
     updateDevHook();
@@ -507,8 +527,13 @@ function setupInputListeners(): void {
 
   window.addEventListener('blur', () => {
     pressedKeys.clear();
+    isPointerHeld = false;
     cardinalKeyStack.length = 0;
     engine.setMoveInput(0, 0);
+  });
+
+  window.addEventListener('pointerup', () => {
+    isPointerHeld = false;
   });
 
   // Smooth 360° & Diagonal Mouse Aiming across the 240x320 Logical Playfield!
@@ -545,10 +570,8 @@ function setupInputListeners(): void {
       lastKeyPressed = `CLICK(${Math.round(pt.x)},${Math.round(pt.y)})`;
       engine.setAimCursor(pt.x, pt.y);
     }
-    engine.fireWeapon(activeWeapon);
-    syncFromEngine();
-    syncBezelDOM();
-    updateDevHook();
+    isPointerHeld = true;
+    handleFireOrAdvance(false);
   });
 }
 
@@ -804,6 +827,7 @@ function renderPlayfield(): void {
         animFrame: t.animFrame,
         flameFrame: t.flameFrame,
         staggerTimer: t.staggerTimer,
+        windupTimer: t.windupTimer,
         flashTimer: t.flashTimer,
         broken: t.broken ?? t.hp <= 0,
         lodgedArrows: t.lodgedArrows,
@@ -841,7 +865,7 @@ function renderPlayfield(): void {
     drawEnemyProjectile(ctx, eproj, frameCount);
   }
 
-  // 8. In-Flight Player Arrows (4-Way Cardinal & Spread Arrows)
+  // 8. In-Flight & Rebounding Player Arrows
   for (const arr of st.arrows) {
     drawArrow(
       ctx,
@@ -856,6 +880,7 @@ function renderPlayfield(): void {
         slowed: Boolean(arr.slowed ?? arr.slowedByPalisade),
         piercing: Boolean(arr.piercing),
         deflected: Boolean(arr.deflected),
+        rebounding: Boolean(arr.rebounding),
         frame: frameCount,
       },
       frameCount
@@ -907,19 +932,20 @@ function renderPlayfield(): void {
     sanctumUnlocked: st.sanctum.unlocked,
   });
 
-  // Live In-Castle Queen Aurelia Parchment Speech Bubble or Tactical Status Banner
+  // Bottom Battlement Queen Aurelia Strip + Top Tactical Alert Strip (never covers enemies!)
   if (st.status === 'playing' && st.queenCalloutText) {
     drawQueenSpeechBubble(ctx, st.queenCalloutText, queenMood, frameCount);
-  } else if (st.status === 'playing' && st.statusBanner) {
+  }
+  if (st.status === 'playing' && st.statusBanner) {
     ctx.fillStyle = 'rgba(12, 18, 30, 0.90)';
-    ctx.fillRect(14, 24, 212, 13.5);
+    ctx.fillRect(14, 23, 212, 12.5);
     ctx.strokeStyle = st.sanctum.unlocked ? '#4ade80' : '#eab308';
     ctx.lineWidth = 0.9;
-    ctx.strokeRect(14, 24, 212, 13.5);
+    ctx.strokeRect(14, 23, 212, 12.5);
     ctx.fillStyle = st.sanctum.unlocked ? '#86efac' : '#fde047';
-    ctx.font = 'bold 6.4px system-ui, -apple-system, sans-serif';
+    ctx.font = 'bold 6.1px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(st.statusBanner.slice(0, 36), 120, 33);
+    ctx.fillText(st.statusBanner.slice(0, 38), 120, 31.3);
     ctx.textAlign = 'left';
   }
 
@@ -1218,7 +1244,7 @@ function updateDevHook(): void {
   const st = engine.getState();
 
   const nextState: TownsaverDevHook = {
-    version: '2.2.0-arrow-master-hd',
+    version: '2.3.0-arrow-master-hd',
     milestone: 5,
     canvasReady: true,
     contextAcquired: true,
@@ -1297,6 +1323,14 @@ function tick(timestamp: number): void {
 
   if (!isPaused) {
     updateMovementVectorFromKeys();
+    const fireHeld =
+      isPointerHeld ||
+      pressedKeys.has('Space') ||
+      pressedKeys.has('KeyF') ||
+      pressedKeys.has('KeyZ');
+    if (fireHeld && engine.getState().status === 'playing') {
+      handleFireOrAdvance(true);
+    }
     engine.step(1 / 60);
     syncFromEngine();
   }

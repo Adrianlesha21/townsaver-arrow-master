@@ -349,4 +349,197 @@ describe('Townsaver v2.0 — Arrow Master Overhaul (2D Movement, Mazes, Top Sanc
     expect(cfg5.hazards.filter((h) => h.kind === 'iron_block').length).toBeGreaterThanOrEqual(4);
     expect(cfg8.hazards.filter((h) => h.kind === 'iron_block').length).toBeGreaterThanOrEqual(6);
   });
+
+  it('v2.3: defeats 2-HP Goblin Guards with two consecutive Single Arrows along the exact same line with ZERO Heart loss', () => {
+    const engine = new GameEngine({
+      storage: new MemoryStorage(),
+      initialStage: 1,
+      storyMode: true,
+      startStatus: 'playing',
+    });
+
+    const st = engine.getState();
+    st.hazards = [];
+    st.targets = [
+      {
+        id: 'guard_2hp',
+        kind: 'goblin_dagger',
+        type: 'goblin_dagger',
+        columnIndex: 1,
+        x: 120,
+        y: 150,
+        width: 18,
+        height: 20,
+        hp: 2,
+        maxHp: 2,
+        patrolMinX: 120,
+        patrolMaxX: 120,
+        vx: 0,
+        attackCooldown: 10,
+        staggerTimer: 0,
+        broken: false,
+        lodgedArrows: [],
+        points: 120,
+        requiredForClear: true,
+        active: true,
+      },
+    ];
+
+    engine.setPosition(120, 230);
+    engine.setAimDirection(0, -1);
+
+    // 1st Single Arrow: 2 -> 1 HP, lodges arrow on Goblin
+    engine.fireWeapon('single');
+    engine.stepFrames(25);
+    expect(st.targets[0].hp).toBe(1);
+    expect(st.targets[0].lodgedArrows.length).toBe(1);
+    expect(engine.getState().hearts).toBe(4);
+
+    // 2nd Single Arrow along exact same X=120 line: cleanly finishes Goblin (1 -> 0 HP) with ZERO self-clip damage!
+    engine.fireWeapon('single');
+    engine.stepFrames(25);
+    expect(st.targets[0].hp).toBe(0);
+    expect(st.targets[0].active).toBe(false);
+    expect(engine.getState().hearts).toBe(4);
+    expect(engine.getState().lastFailReason).toBe('none');
+  });
+
+  it('v2.3: fires rapid follow-up Single Arrows through a Wood Palisade with ZERO mid-air self-clip penalty', () => {
+    const engine = new GameEngine({
+      storage: new MemoryStorage(),
+      initialStage: 1,
+      storyMode: true,
+      startStatus: 'playing',
+    });
+
+    const st = engine.getState();
+    st.hazards = [];
+    st.targets = [
+      {
+        id: 'test_pal',
+        kind: 'palisade',
+        type: 'palisade',
+        columnIndex: 1,
+        x: 120,
+        y: 200,
+        width: 24,
+        height: 18,
+        hp: 1,
+        maxHp: 1,
+        patrolMinX: 120,
+        patrolMaxX: 120,
+        vx: 0,
+        staggerTimer: 0,
+        broken: false,
+        lodgedArrows: [],
+        points: 40,
+        requiredForClear: false,
+        active: true,
+      },
+      {
+        id: 'guard_behind_pal',
+        kind: 'goblin_torch',
+        type: 'goblin_torch',
+        columnIndex: 1,
+        x: 120,
+        y: 120,
+        width: 18,
+        height: 20,
+        hp: 2,
+        maxHp: 2,
+        patrolMinX: 120,
+        patrolMaxX: 120,
+        vx: 0,
+        attackCooldown: 10,
+        staggerTimer: 0,
+        broken: false,
+        lodgedArrows: [],
+        points: 120,
+        requiredForClear: true,
+        active: true,
+      },
+    ];
+
+    engine.setPosition(120, 245);
+    engine.setAimDirection(0, -1);
+
+    // 1st Single Arrow breaks palisade (slows to 115 px/s), 2nd fast Single Arrow fired 4 frames later
+    engine.fireWeapon('single');
+    engine.stepFrames(4);
+    engine.fireWeapon('single');
+    engine.stepFrames(60);
+
+    expect(st.targets[0].broken).toBe(true);
+    expect(st.targets[1].hp).toBe(0);
+    expect(engine.getState().hearts).toBe(4);
+    expect(engine.getState().lastFailReason).toBe('none');
+  });
+
+  it('v2.3: hitting a Blue-Iron box physically rebounds the arrow — loses ZERO Hearts when dodged/missed and ONLY hurts Adrian if the rebounding arrow lands on him', () => {
+    const engine = new GameEngine({
+      storage: new MemoryStorage(),
+      initialStage: 6,
+      storyMode: true,
+      startStatus: 'playing',
+    });
+
+    const st = engine.getState();
+    st.targets = [];
+    st.enemyProjectiles = [];
+    st.hazards = [
+      {
+        id: 'blue_box_test',
+        kind: 'iron_block',
+        type: 'iron_block',
+        columnIndex: 1,
+        x: 120,
+        y: 180,
+        baseX: 120,
+        width: 20,
+        height: 18,
+        radius: 0,
+        angle: 0,
+        angularSpeed: 0,
+        oscillateAmplitude: 0,
+        oscillateSpeed: 0,
+        segments: [],
+        lodgedArrows: [],
+      },
+    ];
+
+    // Case 1: Shoot straight at the Blue-Iron box, then step Adrian aside so the rebounding arrow misses him!
+    engine.setPosition(120, 250);
+    engine.setAimDirection(0, -1);
+    engine.fireWeapon('single');
+
+    // Step until arrow hits the Blue-Iron box and starts rebounding
+    let sawRebound = false;
+    for (let i = 0; i < 25; i++) {
+      engine.step(FIXED_DT);
+      if (engine.getState().arrows.some((a) => a.rebounding)) {
+        sawRebound = true;
+        break;
+      }
+    }
+    expect(sawRebound).toBe(true);
+    // Hitting the Blue-Iron box itself MUST NOT reduce Hearts!
+    expect(engine.getState().hearts).toBe(4);
+
+    // Adrian sidesteps right to x = 156 while the rebounding arrow flies down x = 120 to the wall
+    engine.setPosition(156, 250);
+    engine.stepFrames(90);
+    expect(engine.getState().arrows.length).toBe(0);
+    // Arrow missed Adrian -> STILL 4/4 Hearts!
+    expect(engine.getState().hearts).toBe(4);
+    expect(engine.getState().lastFailReason).toBe('none');
+
+    // Case 2: Shoot straight at the Blue-Iron box and stand completely still on x = 120 so the rebounding arrow hits Adrian!
+    engine.setPosition(120, 250);
+    engine.setAimDirection(0, -1);
+    engine.fireWeapon('single');
+    engine.stepFrames(60);
+
+    expect(engine.getState().hearts).toBe(3);
+    expect(engine.getState().lastFailReason).toBe('iron_block_deflection');
+  });
 });

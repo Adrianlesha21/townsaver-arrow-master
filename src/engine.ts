@@ -307,8 +307,11 @@ export class GameEngine {
         vx: t.vx ?? 0,
         attackInterval:
           t.attackInterval ??
-          (kind === 'goblin_dagger' ? 2.5 : kind === 'goblin_torch' ? 2.9 : 0),
-        attackCooldown: t.attackCooldown ?? 1.2 + (idx % 4) * 0.45,
+          (kind === 'goblin_dagger' ? 2.6 : kind === 'goblin_torch' ? 3.0 : 0),
+        attackCooldown:
+          t.attackCooldown ??
+          (this.storyModeEnabled ? 2.0 + (idx % 4) * 0.55 : 1.2 + (idx % 4) * 0.45),
+        windupTimer: 0,
         dropKind: t.dropKind,
         swoopPhase: t.swoopPhase ?? idx * 0.9,
         staggerTimer: t.staggerTimer ?? 0,
@@ -624,8 +627,8 @@ export class GameEngine {
   }
 
   /**
-   * Smooth 360° Mouse-Cursor Aiming with subtle magnetic target-assist near active foes/crates
-   * so diagonal and long-range shots feel effortless and accurate.
+   * Smooth 360° Mouse-Cursor Aiming with line-of-sight-guarded target assist
+   * so aiming near cover never snaps into a Blue-Iron block.
    */
   public setAimCursor(cursorX: number, cursorY: number): void {
     const clampedX = Math.max(2, Math.min(LOGICAL_WIDTH - 2, cursorX));
@@ -637,15 +640,15 @@ export class GameEngine {
     const pivotX = this.state.adrianX;
     const pivotY = this.state.adrianY - 2;
 
-    // Gentle magnetic snap if cursor is right over or within 14px of an active enemy/crate
+    // Gentle magnetic snap (8px) ONLY if no Blue-Iron block or shield obstructs the line of fire
     let targetX = clampedX;
     let targetY = clampedY;
-    let bestDist = 14;
+    let bestDist = 8;
     for (const t of this.state.targets) {
       if (!t.active || t.hp <= 0 || t.broken) continue;
       if (t.kind === 'palisade') continue;
       const d = Math.hypot(clampedX - t.x, clampedY - t.y);
-      if (d < bestDist) {
+      if (d < bestDist && this.hasClearLineOfSight(pivotX, pivotY, t.x, t.y)) {
         bestDist = d;
         targetX = t.x;
         targetY = t.y;
@@ -659,6 +662,35 @@ export class GameEngine {
       this.state.adrianFacingAngle = angle;
       this.state.adrianFacingDir = GameEngine.angleToFacingDir(angle);
     }
+  }
+
+  private hasClearLineOfSight(x0: number, y0: number, x1: number, y1: number): boolean {
+    const segDx = x1 - x0;
+    const segDy = y1 - y0;
+    const segLenSq = segDx * segDx + segDy * segDy;
+    if (segLenSq < 4) return true;
+
+    for (const h of this.state.hazards) {
+      if (h.kind === 'iron_block') {
+        const hw = (h.width || 20) / 2 + 2.5;
+        const hh = (h.height || 18) / 2 + 2.5;
+        const t = Math.max(0, Math.min(1, ((h.x - x0) * segDx + (h.y - y0) * segDy) / segLenSq));
+        const px = x0 + t * segDx;
+        const py = y0 + t * segDy;
+        if (Math.abs(px - h.x) <= hw && Math.abs(py - h.y) <= hh) {
+          return false;
+        }
+      } else if (h.kind === 'rotating_shield') {
+        const r = (h.radius || 14) + 2.5;
+        const t = Math.max(0, Math.min(1, ((h.x - x0) * segDx + (h.y - y0) * segDy) / segLenSq));
+        const px = x0 + t * segDx;
+        const py = y0 + t * segDy;
+        if (Math.hypot(px - h.x, py - h.y) <= r) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   public setPosition(x: number, y: number): GameState {
@@ -1250,14 +1282,15 @@ export class GameEngine {
 
       if (target.staggerTimer > 0) {
         target.staggerTimer = Math.max(0, target.staggerTimer - dt);
+        target.windupTimer = 0;
       }
       if (target.flashTimer && target.flashTimer > 0) {
         target.flashTimer = Math.max(0, target.flashTimer - dt);
       }
       if (target.hp <= 0) continue;
 
-      // Horizontal Patrol
-      if (target.vx !== 0 && target.staggerTimer <= 0) {
+      // Horizontal Patrol (pauses briefly while winding up a throw)
+      if (target.vx !== 0 && target.staggerTimer <= 0 && (target.windupTimer ?? 0) <= 0) {
         target.x += target.vx * dt;
         if (target.x <= target.patrolMinX) {
           target.x = target.patrolMinX;
@@ -1274,18 +1307,15 @@ export class GameEngine {
         target.y = target.baseY + Math.sin(this.state.stageTime * 2.8 + phase) * 7;
       }
 
-      // Goblin Raider Ranged Attacks (Dagger / Torch Fireball) in Story / 2D Tactical Mode
+      // Goblin Raider Ranged Attacks with visible 0.42s Wind-Up Telegraph in Story / 2D Mode
       if (
         this.storyModeEnabled &&
         (target.kind === 'goblin_dagger' || target.kind === 'goblin_torch') &&
         target.staggerTimer <= 0
       ) {
-        const interval = target.attackInterval ?? 2.6;
-        target.attackCooldown = (target.attackCooldown ?? interval) - dt;
-        if (target.attackCooldown <= 0) {
-          target.attackCooldown = interval;
-          const dist = Math.hypot(this.state.adrianX - target.x, this.state.adrianY - target.y);
-          if (dist <= 215 && this.state.enemyProjectiles.length < 6) {
+        if ((target.windupTimer ?? 0) > 0) {
+          target.windupTimer = Math.max(0, (target.windupTimer ?? 0) - dt);
+          if (target.windupTimer <= 0 && this.state.enemyProjectiles.length < 4) {
             this.spawnEnemyProjectile(
               target.kind === 'goblin_dagger' ? 'dagger' : 'fireball',
               target.x,
@@ -1294,14 +1324,25 @@ export class GameEngine {
               this.state.adrianY
             );
           }
+        } else {
+          const interval = target.attackInterval ?? 2.6;
+          target.attackCooldown = (target.attackCooldown ?? interval) - dt;
+          if (target.attackCooldown <= 0) {
+            target.attackCooldown = interval;
+            const dist = Math.hypot(this.state.adrianX - target.x, this.state.adrianY - target.y);
+            if (dist <= 215 && this.state.enemyProjectiles.length < 4) {
+              target.windupTimer = 0.42;
+            }
+          }
         }
       }
 
-      // Contact Damage if Adrian walks directly into a live Goblin or swooping Bat
+      // Contact Damage if Adrian walks directly into an unstaggered Goblin or swooping Bat
       if (
         (target.kind === 'bat' ||
           target.kind === 'goblin_dagger' ||
           target.kind === 'goblin_torch') &&
+        target.staggerTimer <= 0 &&
         this.state.adrianInvulnTimer <= 0
       ) {
         const tw = (target.width || 18) / 2;
@@ -1325,7 +1366,7 @@ export class GameEngine {
     toY: number
   ): EnemyProjectile {
     const angle = Math.atan2(toY - fromY, toX - fromX);
-    const speed = kind === 'dagger' ? 112 : 94;
+    const speed = kind === 'dagger' ? 96 : 82;
     const proj: EnemyProjectile = {
       id: `eproj_${this.nextEntityId++}`,
       kind,
@@ -1491,6 +1532,116 @@ export class GameEngine {
       arrow.y += arrow.vy * dt;
       arrow.frame = this.state.frameCount;
 
+      // ----------------------------------------------------------------------
+      // PHYSICAL RICOCHET / FALL-BACK ARROW (2D Story Mode Blue-Iron Bounce!)
+      // Only reduces Adrian's life force if the rebounding arrow physically hits him!
+      // ----------------------------------------------------------------------
+      if (arrow.rebounding) {
+        arrow.reboundLife = (arrow.reboundLife ?? 1.6) - dt;
+        arrow.reboundGraceTimer = Math.max(0, (arrow.reboundGraceTimer ?? 0) - dt);
+        arrow.angle = Math.atan2(arrow.vy, arrow.vx) + Math.PI / 2;
+
+        // Expire harmlessly when reaching outer walls or max rebound lifetime (0 Heart loss!)
+        if (
+          arrow.reboundLife <= 0 ||
+          arrow.y <= TOP_CEILING_Y ||
+          arrow.y >= LOGICAL_HEIGHT - 4 ||
+          arrow.x <= 2 ||
+          arrow.x >= LOGICAL_WIDTH - 2
+        ) {
+          arrow.active = false;
+          continue;
+        }
+
+        // Shatter harmlessly if a rebounding arrow strikes a second Iron Block
+        if ((arrow.reboundGraceTimer ?? 0) <= 0.04) {
+          let hitSecondIron = false;
+          for (const h of this.state.hazards) {
+            if (h.kind === 'iron_block') {
+              if (
+                Math.abs(arrow.x - h.x) <= (h.width || 20) / 2 + 2.2 &&
+                Math.abs(arrow.y - h.y) <= (h.height || 18) / 2 + 2.2
+              ) {
+                arrow.active = false;
+                this.spawnParticles(arrow.x, arrow.y, 'iron_spark', 4, '#9be4ff');
+                hitSecondIron = true;
+                break;
+              }
+            }
+          }
+          if (hitSecondIron) continue;
+        }
+
+        // Trick-shot bonus: a rebounding arrow can strike an active Raider or Crate!
+        let hitEnemyOnRebound = false;
+        for (const target of this.state.targets) {
+          if (!target.active || target.hp <= 0 || target.kind === 'palisade') continue;
+          const tw = (target.width || 18) / 2;
+          const th = (target.height || 18) / 2;
+          if (Math.abs(arrow.x - target.x) <= tw + 2.5 && Math.abs(arrow.y - target.y) <= th + 2.5) {
+            arrow.active = false;
+            target.hp = Math.max(0, target.hp - 1);
+            target.flashTimer = 0.16;
+            this.sound?.playEnemyHit();
+            this.spawnBurst(target.x, target.y, 'normal', 0.24);
+            if (target.hp > 0) {
+              target.staggerTimer = 0.5;
+              target.windupTimer = 0;
+              if (target.kind === 'goblin_dagger' || target.kind === 'goblin_torch') {
+                target.attackCooldown = Math.max(target.attackCooldown ?? 0, 1.0);
+              }
+              this.addScore(40);
+            } else {
+              target.active = false;
+              target.broken = true;
+              this.addScore((target.points || 100) + 40);
+              if (target.kind === 'crate') {
+                this.sound?.playWoodShatter(false);
+                this.spawnParticles(target.x, target.y, 'wood_chip', 7, '#c9834b');
+                this.spawnCratePickup(target.x, target.y, target.dropKind);
+              }
+              if (target.requiredForClear) {
+                this.onRequiredTargetDestroyed();
+              }
+            }
+            hitEnemyOnRebound = true;
+            break;
+          }
+        }
+        if (hitEnemyOnRebound || !arrow.active || this.state.status !== 'playing') {
+          continue;
+        }
+
+        // Physical Self-Hit Check: ONLY reduces Adrian's life if the rebounding arrow lands on him!
+        if (
+          (arrow.reboundGraceTimer ?? 0) <= 0 &&
+          this.state.adrianInvulnTimer <= 0 &&
+          Math.hypot(arrow.x - this.state.adrianX, arrow.y - this.state.adrianY) <= 8.5
+        ) {
+          arrow.active = false;
+          this.sound?.playPlayerHurt();
+          this.state.adrianInvulnTimer = 1.2;
+          this.spawnBurst(this.state.adrianX, this.state.adrianY, 'iron_deflect', 0.28);
+          this.spawnParticles(this.state.adrianX, this.state.adrianY, 'spark', 6, '#ef4444');
+
+          const pushX = this.state.adrianX - arrow.x;
+          const pushY = this.state.adrianY - arrow.y;
+          const plen = Math.hypot(pushX, pushY) || 1;
+          const nx = Math.max(
+            14,
+            Math.min(LOGICAL_WIDTH - 14, this.state.adrianX + (pushX / plen) * 8)
+          );
+          const ny = Math.max(40, Math.min(292, this.state.adrianY + (pushY / plen) * 8));
+          if (!this.isSolidForAdrian(nx, ny)) {
+            this.state.adrianX = nx;
+            this.state.adrianY = ny;
+          }
+
+          this.applySanctuaryPenalty('iron_block_deflection');
+        }
+        continue;
+      }
+
       if (arrow.deflected) {
         arrow.angle = (arrow.angle ?? 0.4) + 14 * dt;
         if (
@@ -1517,6 +1668,10 @@ export class GameEngine {
 
       const arrowHalfW = arrow.weaponType === 'heavy' ? 5 : 3;
       const arrowHalfH = arrow.weaponType === 'heavy' ? 12 : 8;
+      const arrowTipRadius = arrow.weaponType === 'heavy' ? 3.5 : 2.2;
+      const arrowSpd = Math.hypot(arrow.vx, arrow.vy) || 1;
+      const tipX = arrow.x + (arrow.vx / arrowSpd) * 4.2;
+      const tipY = arrow.y + (arrow.vy / arrowSpd) * 4.2;
 
       // ----------------------------------------------------------------------
       // 0. MID-AIR PARRY: Player arrow shoots down Goblin Dagger or Fireball!
@@ -1539,33 +1694,36 @@ export class GameEngine {
       if (parriedProj || !arrow.active) continue;
 
       // ----------------------------------------------------------------------
-      // A. FAIL CONDITION 2A: In-Flight Arrow-on-Arrow Clip (Fast vs. Slowed)
+      // A. FAIL CONDITION 2A: Legacy Column-Mode In-Flight Arrow Clip
+      // (Disabled in 2D Story Mode so rapid follow-up shots after Palisades never hurt Adrian!)
       // ----------------------------------------------------------------------
-      let clippedInFlight = false;
-      const speedThis = Math.hypot(arrow.vx, arrow.vy);
-      for (const other of this.state.arrows) {
-        if (
-          !other.active ||
-          other.deflected ||
-          other.id === arrow.id ||
-          (other.volleyId !== undefined && other.volleyId === arrow.volleyId)
-        ) {
+      if (!this.storyModeEnabled) {
+        let clippedInFlight = false;
+        const speedThis = Math.hypot(arrow.vx, arrow.vy);
+        for (const other of this.state.arrows) {
+          if (
+            !other.active ||
+            other.deflected ||
+            other.id === arrow.id ||
+            (other.volleyId !== undefined && other.volleyId === arrow.volleyId)
+          ) {
+            continue;
+          }
+          const speedOther = Math.hypot(other.vx, other.vy);
+          if (
+            Math.abs(arrow.x - other.x) <= 7 &&
+            Math.abs(arrow.y - other.y) <= 12 &&
+            speedThis > speedOther + 10
+          ) {
+            this.handleArrowOnArrowClip(arrow, (arrow.x + other.x) / 2, (arrow.y + other.y) / 2);
+            other.active = false;
+            clippedInFlight = true;
+            break;
+          }
+        }
+        if (clippedInFlight || !arrow.active || this.state.status !== 'playing') {
           continue;
         }
-        const speedOther = Math.hypot(other.vx, other.vy);
-        if (
-          Math.abs(arrow.x - other.x) <= 7 &&
-          Math.abs(arrow.y - other.y) <= 12 &&
-          speedThis > speedOther + 10
-        ) {
-          this.handleArrowOnArrowClip(arrow, (arrow.x + other.x) / 2, (arrow.y + other.y) / 2);
-          other.active = false;
-          clippedInFlight = true;
-          break;
-        }
-      }
-      if (clippedInFlight || !arrow.active || this.state.status !== 'playing') {
-        continue;
       }
 
       // ----------------------------------------------------------------------
@@ -1576,10 +1734,14 @@ export class GameEngine {
         if (hazard.kind === 'iron_block') {
           const hHalfW = (hazard.width || 20) / 2;
           const hHalfH = (hazard.height || 18) / 2;
-          if (
-            Math.abs(arrow.x - hazard.x) <= hHalfW + arrowHalfW &&
-            Math.abs(arrow.y - hazard.y) <= hHalfH + arrowHalfH
-          ) {
+          const hitIron = this.storyModeEnabled
+            ? (Math.abs(tipX - hazard.x) <= hHalfW + arrowTipRadius &&
+                Math.abs(tipY - hazard.y) <= hHalfH + arrowTipRadius) ||
+              (Math.abs(arrow.x - hazard.x) <= hHalfW + arrowTipRadius &&
+                Math.abs(arrow.y - hazard.y) <= hHalfH + arrowTipRadius)
+            : Math.abs(arrow.x - hazard.x) <= hHalfW + arrowHalfW &&
+              Math.abs(arrow.y - hazard.y) <= hHalfH + arrowHalfH;
+          if (hitIron) {
             this.handleIronDeflection(arrow, hazard);
             hitHazard = true;
             break;
@@ -1587,27 +1749,30 @@ export class GameEngine {
         } else if (hazard.kind === 'rotating_shield') {
           const outerR = hazard.radius || 14;
 
-          // 1. Check lodged arrows rotating on the shield rim (Fail Condition 2)
-          let clippedShieldArrow = false;
-          for (let lIdx = hazard.lodgedArrows.length - 1; lIdx >= 0; lIdx--) {
-            const la = hazard.lodgedArrows[lIdx];
-            if (la.volleyId !== undefined && la.volleyId === arrow.volleyId) continue;
-            const worldA = hazard.angle + (la.angleOffset ?? la.angle ?? 0);
-            const lx = hazard.x + Math.cos(worldA) * outerR;
-            const ly = hazard.y + Math.sin(worldA) * outerR;
-            if (Math.hypot(arrow.x - lx, arrow.y - ly) <= 8) {
-              hazard.lodgedArrows.splice(lIdx, 1);
-              this.handleArrowOnArrowClip(arrow, lx, ly);
-              clippedShieldArrow = true;
-              hitHazard = true;
-              break;
+          // 1. Legacy Column-Mode lodged arrows on shield rim (disabled in 2D Story Mode)
+          if (!this.storyModeEnabled) {
+            let clippedShieldArrow = false;
+            for (let lIdx = hazard.lodgedArrows.length - 1; lIdx >= 0; lIdx--) {
+              const la = hazard.lodgedArrows[lIdx];
+              if (la.volleyId !== undefined && la.volleyId === arrow.volleyId) continue;
+              const worldA = hazard.angle + (la.angleOffset ?? la.angle ?? 0);
+              const lx = hazard.x + Math.cos(worldA) * outerR;
+              const ly = hazard.y + Math.sin(worldA) * outerR;
+              if (Math.hypot(arrow.x - lx, arrow.y - ly) <= 8) {
+                hazard.lodgedArrows.splice(lIdx, 1);
+                this.handleArrowOnArrowClip(arrow, lx, ly);
+                clippedShieldArrow = true;
+                hitHazard = true;
+                break;
+              }
             }
+            if (clippedShieldArrow) break;
           }
-          if (clippedShieldArrow) break;
 
           // 2. Check shield rim collision
           const dist = Math.hypot(arrow.x - hazard.x, arrow.y - hazard.y);
-          if (dist <= outerR + arrowHalfW) {
+          const shieldHitRadius = this.storyModeEnabled ? outerR + arrowTipRadius : outerR + arrowHalfW;
+          if (dist <= shieldHitRadius) {
             const worldImpactAngle = Math.atan2(arrow.y - hazard.y, arrow.x - hazard.x);
             const relAngle =
               ((worldImpactAngle - hazard.angle) % (Math.PI * 2) + Math.PI * 2) %
@@ -1634,18 +1799,24 @@ export class GameEngine {
                   this.addScore(30);
                 } else {
                   hitSeg.hp = Math.max(0, hitSeg.hp - arrow.damage);
-                  this.sound?.playEnemyHit();
+                  if (hitSeg.hp > 0) {
+                    this.sound?.playEnemyHit();
+                  } else {
+                    this.sound?.playWoodShatter(false);
+                  }
                   this.spawnBurst(arrow.x, arrow.y, 'normal', 0.22);
                   arrow.active = false;
-                  hazard.lodgedArrows.push({
-                    id: arrow.id,
-                    volleyId: arrow.volleyId,
-                    offsetX: 0,
-                    offsetY: 0,
-                    angle: relAngle,
-                    angleOffset: relAngle,
-                  });
-                  this.addScore(15);
+                  if (hitSeg.hp > 0) {
+                    hazard.lodgedArrows.push({
+                      id: arrow.id,
+                      volleyId: arrow.volleyId,
+                      offsetX: 0,
+                      offsetY: 0,
+                      angle: relAngle,
+                      angleOffset: relAngle,
+                    });
+                  }
+                  this.addScore(hitSeg.hp <= 0 ? 30 : 15);
                   hitHazard = true;
                   break;
                 }
@@ -1659,13 +1830,19 @@ export class GameEngine {
       }
 
       // ----------------------------------------------------------------------
-      // C. TARGETS: Lodged Arrow Clips (Fail Condition 2B), Palisades & Raiders
+      // C. TARGETS: Palisades, Siege Crates, Bats & Goblin Raiders
       // ----------------------------------------------------------------------
       for (const target of this.state.targets) {
         if (!target.active) continue;
 
-        // 1. Check lodged arrows sticking out of this target first (Fail Condition 2B)
-        if (target.lodgedArrows.length > 0 && target.kind !== 'palisade' && target.hp > 0) {
+        // 1. Legacy Column-Mode Lodged Arrow Clip (Fail Condition 2B)
+        // Disabled in 2D Story Mode so shooting a 2-HP Goblin/Crate twice cleanly kills it with 0 self-damage!
+        if (
+          !this.storyModeEnabled &&
+          target.lodgedArrows.length > 0 &&
+          target.kind !== 'palisade' &&
+          target.hp > 0
+        ) {
           let clippedTargetLodged = false;
           for (let lIdx = target.lodgedArrows.length - 1; lIdx >= 0; lIdx--) {
             const la = target.lodgedArrows[lIdx];
@@ -1730,7 +1907,7 @@ export class GameEngine {
                   } else {
                     const sibSpeed = Math.hypot(sibling.vx, sibling.vy) || 260;
                     sibling.vx = (sibling.vx / sibSpeed) * slowedMag;
-                    sibling.vy = (sibling.vy / sibSpeed) * slowedMag;
+                    sibling.vy = (sibling.vx / sibSpeed) * slowedMag;
                   }
                   sibling.slowedByPalisade = true;
                   sibling.slowed = true;
@@ -1772,7 +1949,11 @@ export class GameEngine {
           }
 
           if (target.hp > 0) {
-            target.staggerTimer = 0.35;
+            target.staggerTimer = this.storyModeEnabled ? 0.5 : 0.35;
+            target.windupTimer = 0;
+            if (target.kind === 'goblin_dagger' || target.kind === 'goblin_torch') {
+              target.attackCooldown = Math.max(target.attackCooldown ?? 0, 1.0);
+            }
             if (!arrow.piercing) {
               target.lodgedArrows.push({
                 id: arrow.id,
@@ -1816,18 +1997,76 @@ export class GameEngine {
   private handleIronDeflection(arrow: ArrowEntity, hazard: HazardBlock): void {
     this.sound?.playMetallicClang();
 
+    hazard.sparkTimer = 0.25;
+    hazard.flashTimer = 0.18;
+
+    this.spawnBurst(arrow.x, arrow.y, 'iron_deflect', 0.26);
+    this.spawnParticles(arrow.x, arrow.y, 'iron_spark', 6, '#9be4ff');
+
+    if (this.storyModeEnabled) {
+      // Physical Arrow Fall-Back / Ricochet: bounce off the Blue-Iron surface!
+      // Does NOT reduce Adrian's Hearts unless the rebounding arrow physically strikes Adrian!
+      const REBOUND_SPEED = 136;
+      let rx = -arrow.vx;
+      let ry = -arrow.vy;
+
+      if (hazard.kind === 'rotating_shield') {
+        const dx = arrow.x - hazard.x;
+        const dy = arrow.y - hazard.y;
+        const dlen = Math.hypot(dx, dy) || 1;
+        const nx = dx / dlen;
+        const ny = dy / dlen;
+        const dot = arrow.vx * nx + arrow.vy * ny;
+        rx = dot < 0 ? arrow.vx - 2 * dot * nx : nx * REBOUND_SPEED;
+        ry = dot < 0 ? arrow.vy - 2 * dot * ny : ny * REBOUND_SPEED;
+        const outerR = (hazard.radius || 14) + 3.8;
+        arrow.x = hazard.x + nx * outerR;
+        arrow.y = hazard.y + ny * outerR;
+      } else {
+        const hHalfW = (hazard.width || 20) / 2;
+        const hHalfH = (hazard.height || 18) / 2;
+        const dx = arrow.x - hazard.x;
+        const dy = arrow.y - hazard.y;
+        const penX = hHalfW + 3.5 - Math.abs(dx);
+        const penY = hHalfH + 3.5 - Math.abs(dy);
+
+        if (penX < penY) {
+          const signX = dx < 0 ? -1 : 1;
+          rx = Math.abs(arrow.vx || 80) * signX;
+          ry = arrow.vy;
+          arrow.x = hazard.x + signX * (hHalfW + 3.8);
+        } else {
+          const signY = dy < 0 ? -1 : 1;
+          rx = arrow.vx;
+          ry = Math.abs(arrow.vy || 120) * signY;
+          arrow.y = hazard.y + signY * (hHalfH + 3.8);
+        }
+      }
+
+      const rmag = Math.hypot(rx, ry) || 1;
+      arrow.vx = (rx / rmag) * REBOUND_SPEED;
+      arrow.vy = (ry / rmag) * REBOUND_SPEED;
+      arrow.deflectVx = arrow.vx * FIXED_DT;
+      arrow.deflectVy = arrow.vy * FIXED_DT;
+      arrow.deflected = true;
+      arrow.rebounding = true;
+      arrow.reboundGraceTimer = 0.1;
+      arrow.reboundLife = 1.6;
+      arrow.angle = Math.atan2(arrow.vy, arrow.vx) + Math.PI / 2;
+
+      if (!this.state.sanctum.unlocked) {
+        this.state.statusBanner = 'IRON RICOCHET! DODGE FALLING ARROW!';
+        this.state.bannerTimer = 0.95;
+      }
+      return;
+    }
+
     arrow.deflected = true;
     arrow.vx = arrow.x < hazard.x ? -95 : 95;
     arrow.vy = arrow.y < hazard.y ? -140 : 150;
     arrow.deflectVx = arrow.vx * FIXED_DT;
     arrow.deflectVy = arrow.vy * FIXED_DT;
     arrow.angle = arrow.x < hazard.x ? -0.65 : 0.65;
-
-    hazard.sparkTimer = 0.25;
-    hazard.flashTimer = 0.18;
-
-    this.spawnBurst(arrow.x, arrow.y, 'iron_deflect', 0.26);
-    this.spawnParticles(arrow.x, arrow.y, 'iron_spark', 6, '#9be4ff');
 
     this.applySanctuaryPenalty('iron_block_deflection', arrow.volleyId);
   }
@@ -1848,7 +2087,7 @@ export class GameEngine {
     sourceY: number
   ): void {
     this.sound?.playPlayerHurt();
-    this.state.adrianInvulnTimer = ADRIAN_INVULN_DURATION;
+    this.state.adrianInvulnTimer = this.storyModeEnabled ? 1.2 : ADRIAN_INVULN_DURATION;
     this.spawnBurst(this.state.adrianX, this.state.adrianY, 'arrow_clip', 0.25);
     this.spawnParticles(this.state.adrianX, this.state.adrianY, 'spark', 6, '#ef4444');
 
@@ -1867,9 +2106,10 @@ export class GameEngine {
   }
 
   private applySanctuaryPenalty(reason: FailReason, volleyId?: number): void {
+    const hitStop = this.storyModeEnabled ? 0.05 : HIT_STOP_DURATION;
     this.state.lastFailReason = reason;
-    this.state.hitStopTimer = HIT_STOP_DURATION;
-    this.state.screenShakeTimer = HIT_STOP_DURATION;
+    this.state.hitStopTimer = hitStop;
+    this.state.screenShakeTimer = this.storyModeEnabled ? 0.12 : HIT_STOP_DURATION;
     this.state.screenShakeOffsetX = -2;
     this.state.screenShakeOffsetY = 1;
     this.state.heartFlashTimer = 0.35;
@@ -1887,7 +2127,9 @@ export class GameEngine {
 
     const bannerMap: Record<FailReason, string> = {
       none: '',
-      iron_block_deflection: 'IRON DEFLECTION! -1 HEART',
+      iron_block_deflection: this.storyModeEnabled
+        ? 'RICOCHET HIT! -1 HEART'
+        : 'IRON DEFLECTION! -1 HEART',
       arrow_on_arrow_clip: 'ARROW CLIP! -1 HEART',
       enemy_attack: 'HIT BY RAIDER! -1 HEART',
       hazard_contact: 'SPIKE / RAIDER HIT! -1 HEART',
@@ -1912,7 +2154,7 @@ export class GameEngine {
       this.state.bannerTimer = 1.1;
       this.state.queenCalloutText =
         '"Gods preserve you, Adrian—only one heart left! Hold to cover!"';
-      this.state.queenCalloutTimer = 3.2;
+      this.state.queenCalloutTimer = 2.6;
     } else {
       this.state.queenMood = 'distressed';
       this.state.queenMoodTimer = 1.2;
@@ -1920,9 +2162,9 @@ export class GameEngine {
       this.state.bannerTimer = 1.1;
       this.state.queenCalloutText =
         reason === 'iron_block_deflection'
-          ? '"Beware the enchanted Blue-Iron—it hurls your own shaft back!"'
+          ? '"Step aside when your shaft rebounds off Blue-Iron, Adrian!"'
           : '"Adrian, careful! Keep the stone pillars between you and their fire!"';
-      this.state.queenCalloutTimer = 2.6;
+      this.state.queenCalloutTimer = 2.2;
     }
   }
 

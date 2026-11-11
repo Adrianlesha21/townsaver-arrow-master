@@ -74,6 +74,7 @@ export interface SpriteTarget {
   animFrame?: number;
   flameFrame?: number;
   staggerTimer?: number;
+  windupTimer?: number;
   state?: string;
   flashTimer?: number;
   broken?: boolean;
@@ -107,6 +108,7 @@ export interface SpriteArrow {
   slowed?: boolean;
   piercing?: boolean;
   deflected?: boolean;
+  rebounding?: boolean;
   deflectVx?: number;
   deflectVy?: number;
   animFrame?: number;
@@ -157,6 +159,7 @@ export interface GoblinRenderOptions {
   walkFrame?: number;
   flameFrame?: number;
   stagger?: boolean;
+  windupTimer?: number;
   lodgedArrows?: number | LodgedArrowView[];
 }
 
@@ -1828,6 +1831,22 @@ function drawHDGoblin(
     ctx.fill();
     ctx.stroke();
     ctx.restore();
+  }
+
+  // Throw Wind-Up Telegraph Ring (warns player 0.42s before Goblin hurls dagger/fireball!)
+  if (!stagger && (options.windupTimer ?? 0) > 0) {
+    const prog = Math.min(1, (options.windupTimer ?? 0) / 0.42);
+    const ringR = 3.2 + (1 - prog) * 3.8;
+    ctx.strokeStyle = isDagger ? '#facc15' : '#fb923c';
+    ctx.lineWidth = 1.15;
+    ctx.beginPath();
+    ctx.arc(7.2, -3.5, ringR, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 6.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('!', 0, -18.5);
+    ctx.textAlign = 'left';
   }
 
   // Stagger '!!' Shockburst
@@ -4404,7 +4423,8 @@ function wrapDialogueWords(text: string, maxLen: number): string[] {
 }
 
 /**
- * Renders Queen Aurelia's Live In-Castle Royal Parchment Speech Ribbon below the Top Sanctum!
+ * Renders Queen Aurelia's Live In-Castle Royal Parchment Strip along the bottom battlement frieze
+ * (y = 297.5..317.5) so Bats (y = 68), Top Goblins (y = 82+), and Adrian (y <= 292) are NEVER obscured!
  */
 export function drawQueenSpeechBubble(
   ctx: CanvasRenderingContext2D,
@@ -4413,11 +4433,11 @@ export function drawQueenSpeechBubble(
   _animTick = 0
 ): void {
   if (!text) return;
-  const lines = wrapDialogueWords(text, 48).slice(0, 3);
-  const boxH = lines.length === 1 ? 15 : lines.length === 2 ? 22 : 29;
-  const boxX = 12;
-  const boxY = 58;
-  const boxW = 216;
+  const lines = wrapDialogueWords(text, 52).slice(0, 2);
+  const boxX = 6;
+  const boxY = 297.5;
+  const boxW = 228;
+  const boxH = lines.length === 1 ? 15.5 : 20;
 
   if (!isHDCanvas(ctx)) {
     ctx.fillStyle = '#fef3c7';
@@ -4427,68 +4447,50 @@ export function drawQueenSpeechBubble(
     ctx.font = 'bold 6px serif';
     ctx.fillStyle = '#450a0a';
     ctx.textAlign = 'center';
-    lines.forEach((ln, i) => ctx.fillText(ln, 120, boxY + 9 + i * 8));
+    lines.forEach((ln, i) => ctx.fillText(ln, 120, boxY + 8.5 + i * 7.5));
     ctx.textAlign = 'left';
     return;
   }
 
   ctx.save();
-  // Drop shadow over castle stones
-  ctx.fillStyle = 'rgba(5, 8, 16, 0.55)';
+  // Drop shadow over lower castle battlement frieze
+  ctx.fillStyle = 'rgba(5, 8, 16, 0.65)';
   ctx.beginPath();
-  ctx.roundRect(boxX + 1.5, boxY + 2, boxW, boxH, 4);
+  ctx.roundRect(boxX + 1, boxY + 1.5, boxW, boxH, 3.2);
   ctx.fill();
 
-  // Warm Ivory-Vellum Parchment Gradient + Upward Speech Pointer toward Queen Aurelia (120, 52)
+  // Warm Translucent Ivory-Vellum Parchment Gradient
   const vellum = ctx.createLinearGradient(boxX, boxY, boxX, boxY + boxH);
-  vellum.addColorStop(0, '#fffbeb');
-  vellum.addColorStop(0.6, '#fef3c7');
-  vellum.addColorStop(1, '#fde68a');
+  vellum.addColorStop(0, 'rgba(255, 251, 235, 0.95)');
+  vellum.addColorStop(0.6, 'rgba(254, 243, 199, 0.94)');
+  vellum.addColorStop(1, 'rgba(253, 230, 138, 0.94)');
   ctx.fillStyle = vellum;
   ctx.strokeStyle = mood === 'distressed' ? '#e11d48' : mood === 'cheering' ? '#16a34a' : '#b45309';
-  ctx.lineWidth = 1.25;
+  ctx.lineWidth = 1.15;
 
   ctx.beginPath();
-  ctx.roundRect(boxX, boxY, boxW, boxH, 3.5);
+  ctx.roundRect(boxX, boxY, boxW, boxH, 3.0);
   ctx.fill();
   ctx.stroke();
 
-  // Speech pointer triangle pointing straight up at Queen Aurelia
-  ctx.fillStyle = '#fffbeb';
-  ctx.beginPath();
-  ctx.moveTo(115, boxY + 0.6);
-  ctx.lineTo(120, boxY - 4.8);
-  ctx.lineTo(125, boxY + 0.6);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(115, boxY);
-  ctx.lineTo(120, boxY - 4.8);
-  ctx.lineTo(125, boxY);
-  ctx.stroke();
-
-  // Royal Wax Seal / Crown Accent on Left
+  // Royal Wax Seal / Crown Medallion on Left
   ctx.fillStyle = mood === 'distressed' ? '#be123c' : '#9333ea';
   ctx.beginPath();
-  ctx.arc(boxX + 9, boxY + boxH / 2, 4.8, 0, Math.PI * 2);
+  ctx.arc(boxX + 8.5, boxY + boxH / 2, 4.4, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#facc15';
-  ctx.font = 'bold 6px Georgia, serif';
+  ctx.font = 'bold 5.6px Georgia, serif';
   ctx.textAlign = 'center';
-  ctx.fillText('♛', boxX + 9, boxY + boxH / 2 + 2.1);
+  ctx.fillText('♛', boxX + 8.5, boxY + boxH / 2 + 1.9);
 
   // Crisp Dark-Burgundy Royal Serif Dialogue Text
-  ctx.font = 'italic bold 5.9px Georgia, "Times New Roman", serif';
+  ctx.font = 'italic bold 5.5px Georgia, "Times New Roman", serif';
   ctx.fillStyle = '#3b0712';
   if (lines.length === 1) {
-    ctx.fillText(lines[0], 125, boxY + 9.8);
-  } else if (lines.length === 2) {
-    ctx.fillText(lines[0], 125, boxY + 8.6);
-    ctx.fillText(lines[1], 125, boxY + 16.6);
+    ctx.fillText(lines[0], 124, boxY + 9.8);
   } else {
-    ctx.fillText(lines[0], 125, boxY + 8.2);
-    ctx.fillText(lines[1], 125, boxY + 15.6);
-    ctx.fillText(lines[2], 125, boxY + 23.0);
+    ctx.fillText(lines[0], 124, boxY + 8.0);
+    ctx.fillText(lines[1], 124, boxY + 15.6);
   }
   ctx.textAlign = 'left';
   ctx.restore();
@@ -4830,6 +4832,7 @@ export function drawTarget(
       walkFrame: frame,
       flameFrame: target.flameFrame ?? Math.floor(animTick / 5),
       stagger: Boolean(target.staggerTimer && target.staggerTimer > 0) || target.state === 'stagger',
+      windupTimer: target.windupTimer,
       lodgedArrows: target.lodgedArrows,
     });
     return;
@@ -4892,6 +4895,64 @@ export function drawArrow(
 ): void {
   const angle = arrow.angle ?? (arrow.deflected ? 0.65 : 0);
   const frame = arrow.frame ?? arrow.animFrame ?? animTick;
+
+  if (arrow.rebounding && isHDCanvas(ctx)) {
+    ctx.save();
+    ctx.translate(arrow.x, arrow.y);
+    if (angle !== 0) {
+      ctx.rotate(angle);
+    }
+
+    // Pulsing Crimson-Amber Ricochet Danger Halo (signals player to dodge!)
+    const pulseR = 9.5 + (frame % 4) * 0.9;
+    const aura = ctx.createRadialGradient(0, -2, 0.8, 0, 0, pulseR);
+    aura.addColorStop(0, 'rgba(254, 202, 202, 0.65)');
+    aura.addColorStop(0.55, 'rgba(239, 68, 68, 0.36)');
+    aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(0, 0, pulseR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Fiery Red-Orange Rebound Wake
+    const wakeGrad = ctx.createLinearGradient(0, 6.0, 0, 22);
+    wakeGrad.addColorStop(0, 'rgba(248, 113, 113, 0.88)');
+    wakeGrad.addColorStop(0.5, 'rgba(251, 146, 60, 0.45)');
+    wakeGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = wakeGrad;
+    ctx.beginPath();
+    ctx.moveTo(-2.4, 6.0);
+    ctx.lineTo(2.4, 6.0);
+    ctx.lineTo(0.4, 22);
+    ctx.lineTo(-0.4, 22);
+    ctx.closePath();
+    ctx.fill();
+
+    // Shaft + Crimson Warning Broadhead
+    ctx.fillStyle = '#fb923c';
+    ctx.strokeStyle = '#450a0a';
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.roundRect(-1.0, -4.5, 2.0, 11.2, 0.6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#fee2e2';
+    ctx.strokeStyle = '#991b1b';
+    ctx.lineWidth = 0.85;
+    ctx.beginPath();
+    ctx.moveTo(0, -9.4);
+    ctx.lineTo(3.0, -3.5);
+    ctx.lineTo(1.0, -4.6);
+    ctx.lineTo(-1.0, -4.6);
+    ctx.lineTo(-3.0, -3.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+
   if (arrow.weaponType === 'single') {
     drawSingleArrow(ctx, arrow.x, arrow.y, angle, Boolean(arrow.slowed), frame);
   } else if (arrow.weaponType === 'double') {

@@ -178,6 +178,9 @@ export interface ArrowEntity {
   slowedByPalisade: boolean;
   slowed: boolean;
   deflected: boolean;
+  rebounding?: boolean;
+  reboundGraceTimer?: number;
+  reboundLife?: number;
   deflectVx?: number;
   deflectVy?: number;
   angle: number;
@@ -210,6 +213,7 @@ export interface TargetEntity {
   vy?: number;
   attackCooldown?: number;
   attackInterval?: number;
+  windupTimer?: number;
   dropKind?: PickupKind;
   swoopPhase?: number;
   staggerTimer: number;
