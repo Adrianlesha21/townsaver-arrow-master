@@ -4,7 +4,7 @@
 👉 **[https://adrianlesha21.github.io/townsaver-arrow-master/](https://adrianlesha21.github.io/townsaver-arrow-master/)**
 
 **1-Click Standalone Offline `.html` Download:**  
-👉 **[Download `townsaver_v2_arrow_master.html` (v2.0.0 Release)](https://github.com/Adrianlesha21/townsaver-arrow-master/releases/download/v2.0.0/townsaver_v2_arrow_master.html)**
+👉 **[Download `townsaver_v2_arrow_master.html` (Click ⬇ DOWNLOAD v2.0 (.HTML) in the top-right header or Save Page As)](https://adrianlesha21.github.io/townsaver-arrow-master/townsaver_v2_arrow_master.html)**
 
 ---
 
