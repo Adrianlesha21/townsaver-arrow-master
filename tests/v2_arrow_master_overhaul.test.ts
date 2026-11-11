@@ -84,8 +84,8 @@ describe('Townsaver v2.0 — Arrow Master Overhaul (2D Movement, Mazes, Top Sanc
     const afterDiag = engine.getState();
     expect(afterDiag.adrianX).toBeLessThan(startX);
     expect(afterDiag.adrianY).toBeLessThan(startY);
-    // Diagonal movement preserves 8-way motion while snapping bow cleanly to cardinal 'up'
-    expect(afterDiag.adrianFacingDir).toBe('up');
+    // Diagonal movement sets full 8-way diagonal bow aim ('up-left') so player can shoot diagonally!
+    expect(afterDiag.adrianFacingDir).toBe('up-left');
 
     // Place Adrian directly below Stage 1's intact Wood Palisade at (30, 212) and try walking up through it
     const pal = engine.getState().targets.find((t) => t.id === 's1_pal_c0')!;
@@ -117,7 +117,7 @@ describe('Townsaver v2.0 — Arrow Master Overhaul (2D Movement, Mazes, Top Sanc
     expect(engine.getState().adrianX).toBeLessThanOrEqual(iron.x - 15);
   });
 
-  it('couples WASD / Arrow movement to strict 4-Way Cardinal Aiming (Up, Down, Left, Right) without mouse aiming', () => {
+  it('supports both full 8-Way Diagonal Keyboard Aiming (↑ ↗ → ↘ ↓ ↙ ← ↖) AND 360° Mouse-Cursor Aiming with comfortable bow-tip arrow spawn', () => {
     const engine = new GameEngine({
       storage: new MemoryStorage(),
       initialStage: 1,
@@ -127,35 +127,36 @@ describe('Townsaver v2.0 — Arrow Master Overhaul (2D Movement, Mazes, Top Sanc
 
     engine.setPosition(120, 240);
     expect(engine.getState().useMouseAim).toBe(false);
-    // Live Queen Aurelia Castle Entry Callout is active upon entering the castle ward
     expect(engine.getState().queenCalloutText).toBeTruthy();
 
-    // 1. Horizontal right shot via cardinal aim
-    engine.setCardinalAim('right');
-    const rightArrows = engine.fireWeapon('single');
-    expect(rightArrows.length).toBe(1);
-    expect(rightArrows[0].vx).toBeGreaterThan(250);
-    expect(Math.abs(rightArrows[0].vy)).toBeLessThan(0.1);
-    expect(engine.getState().adrianFacingDir).toBe('right');
+    // 1. Diagonal Up-Right Keyboard Shot (W + D -> ↗)
+    engine.setMoveInput(1, -1);
+    expect(engine.getState().adrianFacingDir).toBe('up-right');
+    const diagRightArrows = engine.fireWeapon('single');
+    expect(diagRightArrows.length).toBe(1);
+    expect(diagRightArrows[0].vx).toBeGreaterThan(180);
+    expect(diagRightArrows[0].vy).toBeLessThan(-180);
+    // Arrow spawns cleanly in front of Adrian's hands along the diagonal bow vector
+    expect(diagRightArrows[0].x).toBeGreaterThan(126);
+    expect(diagRightArrows[0].y).toBeLessThan(232);
     engine.getState().arrows.length = 0;
 
-    // 2. Downward cardinal shot
-    engine.setCardinalAim('down');
-    const downArrows = engine.fireWeapon('single');
-    expect(downArrows.length).toBe(1);
-    expect(downArrows[0].vy).toBeGreaterThan(250);
-    expect(Math.abs(downArrows[0].vx)).toBeLessThan(0.1);
-    expect(engine.getState().adrianFacingDir).toBe('down');
+    // 2. Diagonal Up-Left Double-Arrow Keyboard Shot (W + A -> ↖)
+    engine.setMoveInput(-1, -1);
+    expect(engine.getState().adrianFacingDir).toBe('up-left');
+    const diagLeftArrows = engine.fireWeapon('double');
+    expect(diagLeftArrows.length).toBe(2);
+    expect(diagLeftArrows[0].vx).toBeLessThan(-180);
+    expect(diagLeftArrows[0].vy).toBeLessThan(-180);
     engine.getState().arrows.length = 0;
 
-    // 3. Diagonal movement with preferred last-pressed cardinal ('left' vs 'up')
-    engine.setMoveInput(-1, -1, 'left');
-    expect(engine.getState().adrianFacingDir).toBe('left');
-    const leftArrows = engine.fireWeapon('double');
-    expect(leftArrows.length).toBe(2);
-    expect(leftArrows[0].vx).toBeLessThan(-250);
-    expect(Math.abs(leftArrows[0].vy)).toBeLessThan(0.1);
-    expect(engine.getState().useMouseAim).toBe(false);
+    // 3. Smooth 360° Mouse-Cursor Aiming at arbitrary diagonal angle (e.g. (190, 150))
+    engine.setAimCursor(190, 150);
+    expect(engine.getState().useMouseAim).toBe(true);
+    const mouseArrows = engine.fireWeapon('single');
+    expect(mouseArrows.length).toBe(1);
+    expect(mouseArrows[0].vx).toBeGreaterThan(150);
+    expect(mouseArrows[0].vy).toBeLessThan(-150);
   });
 
   it('locks Top Sanctum Portcullis until all Raiders fall, animates rising portcullis, and requires walking up to Queen Aurelia to clear the stage', () => {

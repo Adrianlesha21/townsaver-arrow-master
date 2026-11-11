@@ -305,10 +305,16 @@ function syncBezelDOM(): void {
       footerMsg.textContent = 'SANCTUM PORTCULLIS OPEN! WALK UP (W / ▲) TO QUEEN AURELIA!';
     } else {
       footerMsg.textContent =
-        'MOVE & AIM (▲▼◀▶): [WASD / ARROWS] • FIRE BOW: [SPACE / ENTER / F]';
+        'WASD / ARROWS: 8-WAY MOVE & DIAGONAL AIM • MOUSE / SPACE: 360° AIM & FIRE!';
     }
   }
 }
+
+let lastMouseActiveTime = 0;
+let lastDiagonalDx = 0;
+let lastDiagonalDy = 0;
+let lastDiagonalTime = 0;
+const DIAGONAL_CHORD_GRACE_MS = 135;
 
 function keyCodeToCardinal(code: string): CardinalDirection | null {
   if (code === 'KeyW' || code === 'ArrowUp' || code === 'Numpad8') return 'up';
@@ -325,6 +331,34 @@ function isDirectionHeld(dir: CardinalDirection): boolean {
   return pressedKeys.has('KeyD') || pressedKeys.has('ArrowRight') || pressedKeys.has('Numpad6');
 }
 
+function isAimOverrideKey(code: string): boolean {
+  return (
+    code === 'KeyI' ||
+    code === 'KeyK' ||
+    code === 'KeyJ' ||
+    code === 'KeyL' ||
+    code === 'Numpad7' ||
+    code === 'Numpad9' ||
+    code === 'Numpad1' ||
+    code === 'Numpad3'
+  );
+}
+
+function updateDedicatedAimFromKeys(): boolean {
+  let ax = 0;
+  let ay = 0;
+  if (pressedKeys.has('KeyJ') || pressedKeys.has('Numpad7') || pressedKeys.has('Numpad1')) ax -= 1;
+  if (pressedKeys.has('KeyL') || pressedKeys.has('Numpad9') || pressedKeys.has('Numpad3')) ax += 1;
+  if (pressedKeys.has('KeyI') || pressedKeys.has('Numpad7') || pressedKeys.has('Numpad9')) ay -= 1;
+  if (pressedKeys.has('KeyK') || pressedKeys.has('Numpad1') || pressedKeys.has('Numpad3')) ay += 1;
+  if (ax !== 0 || ay !== 0) {
+    lastMouseActiveTime = 0;
+    engine.setAimDirection(ax, ay);
+    return true;
+  }
+  return false;
+}
+
 function updateMovementVectorFromKeys(): void {
   let dx = 0;
   let dy = 0;
@@ -333,9 +367,44 @@ function updateMovementVectorFromKeys(): void {
   if (isDirectionHeld('up')) dy -= 1;
   if (isDirectionHeld('down')) dy += 1;
 
-  const preferredCardinal =
-    cardinalKeyStack.length > 0 ? cardinalKeyStack[cardinalKeyStack.length - 1] : undefined;
-  engine.setMoveInput(dx, dy, preferredCardinal);
+  const now = performance.now();
+  const hasDedicatedAim = updateDedicatedAimFromKeys();
+
+  // If mouse has been idle for > 1.8s and player is steering with keyboard, release stale mouse lock
+  // so 8-way & diagonal keyboard aiming works seamlessly!
+  if ((dx !== 0 || dy !== 0) && !hasDedicatedAim && engine.getState().useMouseAim) {
+    if (now - lastMouseActiveTime > 1800) {
+      engine.setAimDirection(dx, dy);
+    }
+  }
+
+  if (dx !== 0 && dy !== 0) {
+    lastDiagonalDx = dx;
+    lastDiagonalDy = dy;
+    lastDiagonalTime = now;
+  }
+
+  engine.setMoveInput(dx, dy);
+
+  // Preserve 8-way diagonal aim across a 135ms chord-release grace window when lifting keys to fire!
+  if (
+    !engine.getState().useMouseAim &&
+    !hasDedicatedAim &&
+    (dx === 0 || dy === 0) &&
+    lastDiagonalDx !== 0 &&
+    lastDiagonalDy !== 0 &&
+    now - lastDiagonalTime <= DIAGONAL_CHORD_GRACE_MS
+  ) {
+    engine.setAimDirection(lastDiagonalDx, lastDiagonalDy);
+  }
+}
+
+function canvasClientToLogical(clientX: number, clientY: number): { x: number; y: number } | null {
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return null;
+  const x = ((clientX - rect.left) / rect.width) * LOGICAL_WIDTH;
+  const y = ((clientY - rect.top) / rect.height) * LOGICAL_HEIGHT;
+  return { x, y };
 }
 
 function handleFireOrAdvance(): void {
@@ -366,21 +435,22 @@ function setupInputListeners(): void {
     const dir = keyCodeToCardinal(e.code);
     if (dir !== null) {
       e.preventDefault();
-      const wasNewPress = !pressedKeys.has(e.code);
       pressedKeys.add(e.code);
-      if (wasNewPress) {
-        const existingIdx = cardinalKeyStack.indexOf(dir);
-        if (existingIdx !== -1) cardinalKeyStack.splice(existingIdx, 1);
-        cardinalKeyStack.push(dir);
-        // Immediately snap Adrian's bow to the newly pressed cardinal direction!
-        engine.setCardinalAim(dir);
-      }
       lastKeyPressed = `MOVE(${e.code})`;
       const st = engine.getState();
       if (st.status === 'briefing') {
         engine.advanceStory();
       }
       updateMovementVectorFromKeys();
+      updateDevHook();
+      return;
+    }
+
+    if (isAimOverrideKey(e.code)) {
+      e.preventDefault();
+      pressedKeys.add(e.code);
+      lastKeyPressed = `AIM(${e.code})`;
+      updateDedicatedAimFromKeys();
       updateDevHook();
       return;
     }
@@ -415,7 +485,6 @@ function setupInputListeners(): void {
       e.code === 'Space' ||
       e.code === 'Enter' ||
       e.code === 'KeyF' ||
-      e.code === 'KeyJ' ||
       e.code === 'KeyZ' ||
       e.code === 'Digit5' ||
       e.code === 'Numpad5' ||
@@ -432,14 +501,6 @@ function setupInputListeners(): void {
   window.addEventListener('keyup', (e: KeyboardEvent) => {
     if (pressedKeys.has(e.code)) {
       pressedKeys.delete(e.code);
-      const dir = keyCodeToCardinal(e.code);
-      if (dir !== null && !isDirectionHeld(dir)) {
-        const idx = cardinalKeyStack.indexOf(dir);
-        if (idx !== -1) cardinalKeyStack.splice(idx, 1);
-      }
-      if (cardinalKeyStack.length > 0) {
-        engine.setCardinalAim(cardinalKeyStack[cardinalKeyStack.length - 1]);
-      }
       updateMovementVectorFromKeys();
     }
   });
@@ -450,10 +511,44 @@ function setupInputListeners(): void {
     engine.setMoveInput(0, 0);
   });
 
-  // Left-Click on canvas advances story overlays or fires straight in Adrian's current cardinal facing (NO mouse aiming!)
-  canvas.addEventListener('pointerdown', () => {
-    lastKeyPressed = 'CLICK_ADVANCE_OR_FIRE';
-    handleFireOrAdvance();
+  // Smooth 360° & Diagonal Mouse Aiming across the 240x320 Logical Playfield!
+  canvas.addEventListener('pointermove', (e: PointerEvent) => {
+    if (engine.getState().status !== 'playing') return;
+    const pt = canvasClientToLogical(e.clientX, e.clientY);
+    if (!pt) return;
+    lastMouseActiveTime = performance.now();
+    engine.setAimCursor(pt.x, pt.y);
+  });
+
+  // Left-Click on Canvas advances Story Overlays OR Aims 360° & Fires Immediately!
+  canvas.addEventListener('pointerdown', (e: PointerEvent) => {
+    const pt = canvasClientToLogical(e.clientX, e.clientY);
+    const st = engine.getState();
+    if (
+      st.status === 'prologue' ||
+      st.status === 'briefing' ||
+      st.status === 'title' ||
+      st.status === 'stage_clear' ||
+      st.status === 'victory_campaign'
+    ) {
+      lastKeyPressed = 'CLICK_STORY_ADVANCE';
+      engine.advanceStory();
+      syncFromEngine();
+      syncBezelDOM();
+      if (ctx) renderPlayfield();
+      updateDevHook();
+      return;
+    }
+
+    if (pt) {
+      lastMouseActiveTime = performance.now();
+      lastKeyPressed = `CLICK(${Math.round(pt.x)},${Math.round(pt.y)})`;
+      engine.setAimCursor(pt.x, pt.y);
+    }
+    engine.fireWeapon(activeWeapon);
+    syncFromEngine();
+    syncBezelDOM();
+    updateDevHook();
   });
 }
 
@@ -775,7 +870,7 @@ function renderPlayfield(): void {
     drawParticle(ctx, p);
   }
 
-  // 10. Adrian (The Arrow Master) with 4-Pose HD Directional Art & Golden Cardinal Chevron!
+  // 10. Adrian (The Arrow Master) with 360° Orbital Bow, Diagonal Aim & Target Sightline!
   const flashActive = st.muzzleFlashTimer > 0;
   const flashWeapon = st.muzzleFlashWeapon !== 'none' ? st.muzzleFlashWeapon : activeWeapon;
   drawAdrian(
@@ -790,8 +885,8 @@ function renderPlayfield(): void {
       walkTick: st.adrianWalkTick,
       invulnerable: st.adrianInvulnTimer > 0,
       showAimReticle: st.status === 'playing',
-      cursorX: null,
-      cursorY: null,
+      cursorX: st.useMouseAim ? st.aimCursorX : null,
+      cursorY: st.useMouseAim ? st.aimCursorY : null,
     }
   );
 
@@ -850,12 +945,12 @@ function renderPlayfield(): void {
             : undefined,
         hint:
           slide.slideNumber === 3
-            ? 'MOVE & AIM: [WASD] OR [ARROW KEYS] (▲▼◀▶) • FIRE: [SPACE]!'
+            ? 'WASD/ARROWS: 8-Way Move & Diagonal Aim • MOUSE/SPACE: 360° Aim & Shoot!'
             : 'ROYAL CHRONICLE • CASTLE ELDORIA',
         promptText:
           slide.slideNumber < slide.totalSlides
-            ? '▶ PRESS [SPACE] OR [ENTER] FOR NEXT'
-            : '▶ PRESS [SPACE] OR [ENTER] TO BEGIN',
+            ? '▶ PRESS [SPACE] OR CLICK FOR NEXT'
+            : '▶ PRESS [SPACE] OR CLICK TO BEGIN',
       },
       frameCount
     );
@@ -870,7 +965,7 @@ function renderPlayfield(): void {
         queenQuote: st.story.queenPlea,
         hint: st.story.tacticalHint,
         queenMood: st.queenMood,
-        promptText: '▶ PRESS [SPACE] OR [WASD / ARROWS] TO ENTER',
+        promptText: '▶ PRESS [SPACE] / [WASD] OR CLICK TO ENTER',
       },
       frameCount
     );
@@ -1123,7 +1218,7 @@ function updateDevHook(): void {
   const st = engine.getState();
 
   const nextState: TownsaverDevHook = {
-    version: '2.1.0-arrow-master-hd',
+    version: '2.2.0-arrow-master-hd',
     milestone: 5,
     canvasReady: true,
     contextAcquired: true,

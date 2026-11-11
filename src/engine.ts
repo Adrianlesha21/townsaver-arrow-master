@@ -87,7 +87,6 @@ export class GameEngine {
   private storyModeEnabled: boolean;
   private moveInputX = 0;
   private moveInputY = 0;
-  private preferredCardinal: CardinalDirection | null = null;
   private autoStepActive = false;
 
   private state: GameState;
@@ -273,7 +272,6 @@ export class GameEngine {
     this.autoStepActive = false;
     this.moveInputX = 0;
     this.moveInputY = 0;
-    this.preferredCardinal = null;
 
     const targets: TargetEntity[] = config.targets.map((t, idx) => {
       const kind = t.kind ?? t.type ?? 'goblin_torch';
@@ -570,7 +568,7 @@ export class GameEngine {
   }
 
   // ==========================================================================
-  // 3. 8-WAY FREE-ROAM MOVEMENT + CLEAN 4-WAY CARDINAL AIMING (UP/DOWN/LEFT/RIGHT)
+  // 3. 8-WAY FREE-ROAM MOVEMENT + 360° MOUSE & 8-WAY DIAGONAL HYBRID AIMING
   // ==========================================================================
 
   public static cardinalToAngle(dir: CardinalDirection): number {
@@ -586,28 +584,7 @@ export class GameEngine {
     }
   }
 
-  public static snapToCardinal(
-    dx: number,
-    dy: number,
-    fallback: CardinalDirection = 'up'
-  ): CardinalDirection {
-    if (dx === 0 && dy === 0) return fallback;
-    if (Math.abs(dy) >= Math.abs(dx)) {
-      return dy < 0 ? 'up' : 'down';
-    }
-    return dx < 0 ? 'left' : 'right';
-  }
-
-  public static currentCardinalFromFacing(dir: FacingDirection): CardinalDirection {
-    if (dir === 'up' || dir === 'down' || dir === 'left' || dir === 'right') {
-      return dir;
-    }
-    if (dir === 'up-left' || dir === 'up-right') return 'up';
-    return 'down';
-  }
-
   public setCardinalAim(dir: CardinalDirection): void {
-    this.preferredCardinal = dir;
     this.state.useMouseAim = false;
     this.state.aimCursorX = null;
     this.state.aimCursorY = null;
@@ -618,39 +595,69 @@ export class GameEngine {
   public setMoveInput(
     dx: number,
     dy: number,
-    preferredCardinal?: CardinalDirection | null
+    _preferredCardinal?: CardinalDirection | null
   ): void {
     this.moveInputX = Math.max(-1, Math.min(1, dx));
     this.moveInputY = Math.max(-1, Math.min(1, dy));
-    if (preferredCardinal) {
-      this.preferredCardinal = preferredCardinal;
-    } else if (this.moveInputX === 0 && this.moveInputY === 0) {
-      this.preferredCardinal = null;
-    }
-
     if (this.moveInputX !== 0 || this.moveInputY !== 0) {
       this.autoStepActive = false;
-      const curCard = GameEngine.currentCardinalFromFacing(this.state.adrianFacingDir);
-      const nextCard =
-        preferredCardinal ?? GameEngine.snapToCardinal(this.moveInputX, this.moveInputY, curCard);
-      this.setCardinalAim(nextCard);
+      // When not actively aiming with the mouse, 8-way WASD/Arrows aims in ALL 8 directions (including all 4 diagonals!)
+      if (!this.state.useMouseAim) {
+        this.state.adrianFacingAngle = Math.atan2(this.moveInputY, this.moveInputX);
+        this.state.adrianFacingDir = GameEngine.angleToFacingDir(this.state.adrianFacingAngle);
+      }
     }
   }
 
+  /**
+   * Explicitly sets 8-way / arbitrary keyboard aim direction (supports all 4 diagonals + 4 cardinals)
+   * and switches from mouse aim to keyboard directional aim.
+   */
   public setAimDirection(dx: number, dy: number): void {
     if (dx === 0 && dy === 0) return;
-    const curCard = GameEngine.currentCardinalFromFacing(this.state.adrianFacingDir);
-    const nextCard = GameEngine.snapToCardinal(dx, dy, curCard);
-    this.setCardinalAim(nextCard);
+    this.state.useMouseAim = false;
+    this.state.aimCursorX = null;
+    this.state.aimCursorY = null;
+    const angle = Math.atan2(dy, dx);
+    this.state.adrianFacingAngle = angle;
+    this.state.adrianFacingDir = GameEngine.angleToFacingDir(angle);
   }
 
+  /**
+   * Smooth 360° Mouse-Cursor Aiming with subtle magnetic target-assist near active foes/crates
+   * so diagonal and long-range shots feel effortless and accurate.
+   */
   public setAimCursor(cursorX: number, cursorY: number): void {
-    // 360° mouse aiming removed per v2.1 design; snaps cleanly to nearest 4-way cardinal
-    const dx = cursorX - this.state.adrianX;
-    const dy = cursorY - this.state.adrianY;
+    const clampedX = Math.max(2, Math.min(LOGICAL_WIDTH - 2, cursorX));
+    const clampedY = Math.max(PLAYFIELD_TOP_Y, Math.min(LOGICAL_HEIGHT - 4, cursorY));
+    this.state.aimCursorX = clampedX;
+    this.state.aimCursorY = clampedY;
+    this.state.useMouseAim = true;
+
+    const pivotX = this.state.adrianX;
+    const pivotY = this.state.adrianY - 2;
+
+    // Gentle magnetic snap if cursor is right over or within 14px of an active enemy/crate
+    let targetX = clampedX;
+    let targetY = clampedY;
+    let bestDist = 14;
+    for (const t of this.state.targets) {
+      if (!t.active || t.hp <= 0 || t.broken) continue;
+      if (t.kind === 'palisade') continue;
+      const d = Math.hypot(clampedX - t.x, clampedY - t.y);
+      if (d < bestDist) {
+        bestDist = d;
+        targetX = t.x;
+        targetY = t.y;
+      }
+    }
+
+    const dx = targetX - pivotX;
+    const dy = targetY - pivotY;
     if (Math.hypot(dx, dy) > 2) {
-      const curCard = GameEngine.currentCardinalFromFacing(this.state.adrianFacingDir);
-      this.setCardinalAim(GameEngine.snapToCardinal(dx, dy, curCard));
+      const angle = Math.atan2(dy, dx);
+      this.state.adrianFacingAngle = angle;
+      this.state.adrianFacingDir = GameEngine.angleToFacingDir(angle);
     }
   }
 
@@ -667,13 +674,13 @@ export class GameEngine {
 
   /**
    * Moves Adrian along a 2D input vector (dx, dy) with sliding X/Y obstacle collision
-   * while snapping his bow aim cleanly to the 4 cardinal directions (Up, Down, Left, Right).
+   * while supporting full 8-way diagonal keyboard aiming AND 360° mouse cursor tracking!
    */
   public moveAdrian(
     dx: number,
     dy: number,
     dtSeconds: number = FIXED_DT,
-    preservePreferredCardinal = false
+    _preservePreferredCardinal = false
   ): GameState {
     if (dx === 0 && dy === 0) {
       this.state.adrianVx = 0;
@@ -692,16 +699,10 @@ export class GameEngine {
     this.state.adrianVy = vy;
     this.state.adrianWalkTick += dtSeconds;
 
-    const curCard = GameEngine.currentCardinalFromFacing(this.state.adrianFacingDir);
-    const nextCard =
-      preservePreferredCardinal && this.preferredCardinal
-        ? this.preferredCardinal
-        : GameEngine.snapToCardinal(dx, dy, curCard);
-    this.state.useMouseAim = false;
-    this.state.aimCursorX = null;
-    this.state.aimCursorY = null;
-    this.state.adrianFacingDir = nextCard;
-    this.state.adrianFacingAngle = GameEngine.cardinalToAngle(nextCard);
+    if (!this.state.useMouseAim) {
+      this.state.adrianFacingAngle = Math.atan2(ny, nx);
+      this.state.adrianFacingDir = GameEngine.angleToFacingDir(this.state.adrianFacingAngle);
+    }
 
     // Sliding collision: resolve X first, then Y independently
     const candidateX = Math.max(14, Math.min(LOGICAL_WIDTH - 14, this.state.adrianX + vx * dtSeconds));
@@ -713,6 +714,15 @@ export class GameEngine {
     const candidateY = Math.max(minY, Math.min(292, this.state.adrianY + vy * dtSeconds));
     if (!this.isSolidForAdrian(this.state.adrianX, candidateY)) {
       this.state.adrianY = candidateY;
+    }
+
+    // Keep 360° mouse angle locked onto the cursor as Adrian moves through the arena!
+    if (
+      this.state.useMouseAim &&
+      this.state.aimCursorX !== null &&
+      this.state.aimCursorY !== null
+    ) {
+      this.setAimCursor(this.state.aimCursorX, this.state.aimCursorY);
     }
 
     this.state.targetAdrianX = this.state.adrianX;
@@ -792,7 +802,7 @@ export class GameEngine {
   }
 
   // ==========================================================================
-  // 4. WEAPON SELECTION & DIRECTIONAL / 360° FIRING
+  // 4. WEAPON SELECTION & 360° / 8-WAY DIAGONAL FIRING
   // ==========================================================================
 
   public selectWeapon(weapon: WeaponType): void {
@@ -883,7 +893,7 @@ export class GameEngine {
       }
     }
 
-    // Refresh mouse cursor angle if aiming with mouse
+    // Refresh mouse cursor angle (with gentle target assist) if aiming with mouse
     if (
       !explicitColMode &&
       aimAngleOverride === undefined &&
@@ -891,12 +901,7 @@ export class GameEngine {
       this.state.aimCursorX !== null &&
       this.state.aimCursorY !== null
     ) {
-      const cdx = this.state.aimCursorX - this.state.adrianX;
-      const cdy = this.state.aimCursorY - this.state.adrianY;
-      if (Math.hypot(cdx, cdy) > 2) {
-        this.state.adrianFacingAngle = Math.atan2(cdy, cdx);
-        this.state.adrianFacingDir = GameEngine.angleToFacingDir(this.state.adrianFacingAngle);
-      }
+      this.setAimCursor(this.state.aimCursorX, this.state.aimCursorY);
     }
 
     const aimAngle = explicitColMode
@@ -912,16 +917,20 @@ export class GameEngine {
     const perpY = cosA;
 
     const isStraightUp = Math.abs(aimAngle + Math.PI / 2) < 1e-4;
+    const bowPivotY = this.state.adrianY - 2;
+    const muzzleReach = 14;
+    const legacyFixedLaneShot =
+      explicitColMode ||
+      (!this.storyModeEnabled && isStraightUp && Math.abs(this.state.adrianY - ADRIAN_Y) < 1);
+
     const originX = explicitColMode
       ? COLUMNS[this.state.currentColumnIndex]
       : isStraightUp && this.autoStepActive
       ? this.state.targetAdrianX
-      : this.state.adrianX + cosA * 10;
-    const originY = explicitColMode
+      : this.state.adrianX + cosA * muzzleReach;
+    const originY = legacyFixedLaneShot
       ? ARROW_SPAWN_Y
-      : isStraightUp && Math.abs(this.state.adrianY - ADRIAN_Y) < 1
-      ? ARROW_SPAWN_Y
-      : this.state.adrianY + sinA * 10;
+      : bowPivotY + sinA * muzzleReach;
 
     if (explicitColMode || (isStraightUp && this.autoStepActive)) {
       this.state.adrianX = originX;
@@ -947,6 +956,7 @@ export class GameEngine {
         : SINGLE_ARROW_SPEED
       : sinA * baseSpeed;
     const spriteAngle = isStraightUp ? 0 : aimAngle + Math.PI / 2;
+    const doubleOffset = legacyFixedLaneShot ? 6 : 5;
 
     if (weapon === 'single') {
       const arrow: ArrowEntity = {
@@ -972,7 +982,7 @@ export class GameEngine {
       this.state.arrows.push(arrow);
       spawned.push(arrow);
     } else if (weapon === 'double') {
-      for (const offset of [-6, 6]) {
+      for (const offset of [-doubleOffset, doubleOffset]) {
         const arrow: ArrowEntity = {
           id: `arrow_${this.nextEntityId++}`,
           volleyId,

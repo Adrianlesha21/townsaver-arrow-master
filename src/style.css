@@ -37,9 +37,9 @@
   --text-cyan: #70c4ff;
 
   /* Dimensions */
-  --canvas-width: 480px;  /* 2x native 240px */
-  --canvas-height: 640px; /* 2x native 320px */
-  --bezel-width: 320px;
+  --canvas-width: 504px;  /* Larger central castle playfield viewport */
+  --canvas-height: 672px; /* Exact 3:4 aspect ratio over 960x1280 4x HiDPI buffer */
+  --bezel-width: 312px;
 }
 
 /* --------------------------------------------------------------------------
@@ -72,11 +72,11 @@ html, body {
 }
 
 /* --------------------------------------------------------------------------
-   ARCADE CABINET SHELL CONTAINER (1280x800 Desktop Chrome Target)
+   ARCADE CABINET SHELL CONTAINER (1320x816 Desktop Chrome Target, auto-clamped)
    -------------------------------------------------------------------------- */
 .arcade-cabinet {
-  width: 1280px;
-  height: 800px;
+  width: 1320px;
+  height: 816px;
   max-width: 100vw;
   max-height: 100vh;
   display: flex;
@@ -562,7 +562,7 @@ html, body {
   height: var(--canvas-height);
   display: block;
   background-color: #161d2c;
-  cursor: default;
+  cursor: crosshair;
 }
 
 /* Bottom Monitor Trim */

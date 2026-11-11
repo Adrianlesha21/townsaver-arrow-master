@@ -130,7 +130,7 @@ export const STORY_CHAPTERS: Record<number, StoryChapter> = {
     queenPlea:
       '"Adrian—you live! Thank the stars! Grimgor’s scouts hold the gatehouse seal; strike them down before the watch-horn sounds!"',
     queenCastleCallout: '"Adrian! Over here—beware the goblin torches in the shadows!"',
-    tacticalHint: 'MOVE & AIM (▲▼◀▶): WASD or Arrow Keys • FIRE: [SPACE]!',
+    tacticalHint: 'AIM 360° (MOUSE CLICK) or 8-WAY DIAGONAL (WASD/ARROWS + SPACE)!',
     reunionQuote:
       '"I knew no flame could bar your path! Wait—iron chains rattle above! Grimgor’s captains drag me toward the Inner Alley!"',
   },

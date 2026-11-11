@@ -425,246 +425,310 @@ function drawHDAdrian(
   const sinA = Math.sin(aimAngle);
   const isMoving = Boolean(options?.isMoving);
   const walkPhase = isMoving && options?.walkTick !== undefined ? options.walkTick * 12 : 0;
-  const bob = isMoving ? Math.sin(walkPhase) * 1.1 : 0;
-  const stride = isMoving ? Math.sin(walkPhase) * 2.4 : 0;
+  const bob = isMoving ? Math.sin(walkPhase) * 1.0 : 0;
+  const stride = isMoving ? Math.sin(walkPhase) * 2.3 : 0;
   const invulnFlash = Boolean(
     options?.invulnerable && Math.floor((options.walkTick ?? 0) * 20) % 2 === 1
   );
 
-  // Determine strict 4-way cardinal pose: 'up' | 'down' | 'left' | 'right'
-  let dir: 'up' | 'down' | 'left' | 'right' = 'up';
-  if (Math.abs(sinA) >= Math.abs(cosA)) {
-    dir = sinA < 0 ? 'up' : 'down';
-  } else {
-    dir = cosA < 0 ? 'left' : 'right';
-  }
+  // Body facing posture adapts smoothly to 360° / 8-way diagonal aim!
+  const facingBack = sinA < -0.58;
+  const facingFront = sinA > 0.58;
+  const flipSide = cosA < -0.08 ? -1 : 1;
+
+  const pivotX = x;
+  const pivotY = y - 2 + bob;
 
   ctx.save();
   ctx.translate(x, y + bob);
 
-  // 1. Heroic cyan-gold ground visibility aura + soft contact shadow
-  const halo = ctx.createRadialGradient(0, 3, 1, 0, 3, 16);
-  halo.addColorStop(0, 'rgba(56, 189, 248, 0.32)');
+  // 1. Heroic Royal-Cyan & Gold Ground Aura + Contact Shadow
+  const halo = ctx.createRadialGradient(0, 2, 1, 0, 2, 15);
+  halo.addColorStop(0, 'rgba(56, 189, 248, 0.30)');
   halo.addColorStop(0.6, 'rgba(250, 204, 21, 0.12)');
   halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
   ctx.fillStyle = halo;
   ctx.beginPath();
-  ctx.arc(0, 3, 16, 0, Math.PI * 2);
+  ctx.arc(0, 2, 15, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = 'rgba(5, 8, 15, 0.58)';
   ctx.beginPath();
-  ctx.ellipse(0, 11.5 - bob * 0.5, 8.5, 3.2, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 10.6 - bob * 0.5, 7.6, 2.8, 0, 0, Math.PI * 2);
   ctx.fill();
 
   if (invulnFlash) {
-    ctx.globalAlpha = 0.6;
+    ctx.globalAlpha = 0.58;
   }
 
-  // Boots (animated 2D stride)
-  ctx.fillStyle = '#451a03';
-  ctx.strokeStyle = '#090d16';
-  ctx.lineWidth = 1.1;
-  const leftFootY = 8.5 + stride * 0.6;
-  const rightFootY = 8.5 - stride * 0.6;
-  ctx.beginPath();
-  ctx.roundRect(-5.5, leftFootY, 4.2, 3.8, 1.2);
-  ctx.fill();
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.roundRect(1.3, rightFootY, 4.2, 3.8, 1.2);
-  ctx.fill();
-  ctx.stroke();
-
-  // Trousers
-  ctx.fillStyle = '#1e293b';
-  ctx.fillRect(-4.5, 4.5, 3.2, 4.5);
-  ctx.fillRect(1.3, 4.5, 3.2, 4.5);
-
-  if (dir === 'up') {
-    // --- UP POSE: Gilded Recurve Bow raised ahead + Flowing Royal Blue Cloak from behind ---
-    // Overhead Recurve Bow & Glowing Nocked Arrow
+  // Draw Bow UNDER body when aiming upward/back so Adrian holds it naturally in front of his chest!
+  const drawOrbitalBow = () => {
+    const pull = resolved === 'draw' ? -2.2 : -0.6;
     ctx.save();
-    ctx.translate(0, -10.5);
-    ctx.strokeStyle = '#fef08a';
+    ctx.translate(0, -2.0);
+    ctx.rotate(aimAngle);
+
+    // Bowstring (taut silver-gold cord)
+    ctx.strokeStyle = '#f8fafc';
+    ctx.lineWidth = 0.85;
+    ctx.beginPath();
+    ctx.moveTo(8.8, -7.8);
+    ctx.lineTo(4.6 + pull, 0);
+    ctx.lineTo(8.8, 7.8);
+    ctx.stroke();
+
+    // Sculpted Gilded Recurve Bow Limbs (double-curved limbs + crimson grip)
+    const bowGrad = ctx.createLinearGradient(6, -8, 13, 8);
+    bowGrad.addColorStop(0, '#fde047');
+    bowGrad.addColorStop(0.5, '#f59e0b');
+    bowGrad.addColorStop(1, '#fde047');
+    ctx.strokeStyle = '#090d16';
+    ctx.lineWidth = 3.2;
+    ctx.beginPath();
+    ctx.moveTo(8.5, -8.2);
+    ctx.quadraticCurveTo(13.2, -4.0, 11.4, 0);
+    ctx.quadraticCurveTo(13.2, 4.0, 8.5, 8.2);
+    ctx.stroke();
+
+    ctx.strokeStyle = bowGrad;
+    ctx.lineWidth = 1.9;
+    ctx.beginPath();
+    ctx.moveTo(8.5, -8.2);
+    ctx.quadraticCurveTo(13.2, -4.0, 11.4, 0);
+    ctx.quadraticCurveTo(13.2, 4.0, 8.5, 8.2);
+    ctx.stroke();
+
+    // Bow Riser Grip + Archer Lead Gauntlet
+    ctx.fillStyle = '#991b1b';
+    ctx.fillRect(10.2, -1.6, 2.2, 3.2);
+    ctx.fillStyle = '#fed7aa';
+    ctx.strokeStyle = '#090d16';
     ctx.lineWidth = 0.8;
     ctx.beginPath();
-    ctx.moveTo(-8.5, 2.5);
-    ctx.lineTo(0, 5.5);
-    ctx.lineTo(8.5, 2.5);
+    ctx.arc(11.0, 0.2, 1.7, 0, Math.PI * 2);
+    ctx.fill();
     ctx.stroke();
 
-    const bowGrad = ctx.createLinearGradient(-9, 0, 9, 0);
-    bowGrad.addColorStop(0, '#b45309');
-    bowGrad.addColorStop(0.5, '#facc15');
-    bowGrad.addColorStop(1, '#b45309');
-    ctx.strokeStyle = bowGrad;
+    // Nocked Sleek HD Arrow along aim axis (cleanly out in front of the bow!)
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.moveTo(4.8 + pull, 0);
+    ctx.lineTo(3.2 + pull, -1.8);
+    ctx.lineTo(6.2 + pull, -0.5);
+    ctx.moveTo(4.8 + pull, 0);
+    ctx.lineTo(3.2 + pull, 1.8);
+    ctx.lineTo(6.2 + pull, 0.5);
+    ctx.fill();
+
+    // Polished Oak & Gold Shaft
+    ctx.strokeStyle = '#090d16';
     ctx.lineWidth = 2.1;
     ctx.beginPath();
-    ctx.arc(0, 5, 9, Math.PI * 1.15, Math.PI * 1.85);
+    ctx.moveTo(5.0 + pull, 0);
+    ctx.lineTo(15.2, 0);
+    ctx.stroke();
+    ctx.strokeStyle = '#fde68a';
+    ctx.lineWidth = 1.15;
+    ctx.beginPath();
+    ctx.moveTo(5.0 + pull, 0);
+    ctx.lineTo(15.2, 0);
     ctx.stroke();
 
-    // Glowing Arrow Shaft pointing UP
-    ctx.strokeStyle = '#fef08a';
-    ctx.lineWidth = 1.4;
+    // Razor-Sharp Diamond Bodkin Steel Arrowhead (tip at +18.8px)
+    ctx.fillStyle = '#e0f2fe';
+    ctx.strokeStyle = '#090d16';
+    ctx.lineWidth = 0.85;
     ctx.beginPath();
-    ctx.moveTo(0, 5);
-    ctx.lineTo(0, -7.5);
-    ctx.stroke();
-    ctx.fillStyle = '#38bdf8';
-    ctx.beginPath();
-    ctx.moveTo(0, -10.5);
-    ctx.lineTo(-2.4, -6.5);
-    ctx.lineTo(2.4, -6.5);
+    ctx.moveTo(18.8, 0);
+    ctx.lineTo(14.2, -2.3);
+    ctx.lineTo(15.2, 0);
+    ctx.lineTo(14.2, 2.3);
     ctx.closePath();
     ctx.fill();
-    ctx.restore();
+    ctx.stroke();
 
-    // Quiver with white fletchings slung across right shoulder
+    // Draw Hand on String
     ctx.fillStyle = '#78350f';
-    ctx.strokeStyle = '#090d16';
-    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(3.5, -8.5, 3.8, 9, 1);
+    ctx.arc(4.8 + pull, 1.1, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  };
+
+  if (sinA < -0.15) {
+    drawOrbitalBow();
+  }
+
+  // Animated Ranger Boots & Greaves
+  ctx.fillStyle = '#451a03';
+  ctx.strokeStyle = '#090d16';
+  ctx.lineWidth = 1.05;
+  ctx.beginPath();
+  ctx.roundRect(-4.8, 7.2 + stride * 0.55, 3.8, 3.6, 1.1);
+  ctx.roundRect(1.0, 7.2 - stride * 0.55, 3.8, 3.6, 1.1);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(-4.0, 3.8, 2.8, 4.0);
+  ctx.fillRect(1.2, 3.8, 2.8, 4.0);
+
+  if (facingBack) {
+    // --- BACK / UPWARD RANGER SILHOUETTE (Sculpted Hood + Pauldrons + Quiver + Split Royal Cloak) ---
+    // Leather Quiver + Crimson-Fletched Arrows
+    ctx.fillStyle = '#78350f';
+    ctx.beginPath();
+    ctx.roundRect(2.6, -8.2, 3.4, 8.6, 1.0);
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(4.2, -11, 1.2, 2.8);
-    ctx.fillRect(6.0, -10.5, 1.2, 2.5);
+    ctx.fillRect(3.2, -10.4, 1.1, 2.4);
+    ctx.fillStyle = '#f43f5e';
+    ctx.fillRect(4.7, -10.0, 1.1, 2.2);
 
-    // Flowing Royal Cloak (Back View with Gold Hem & Emblem)
-    const cloakGrad = ctx.createLinearGradient(0, -7, 0, 7.5);
+    // Shoulder Pauldrons
+    ctx.fillStyle = '#92400e';
+    ctx.beginPath();
+    ctx.ellipse(-5.2, -4.0, 2.6, 2.0, -0.3, 0, Math.PI * 2);
+    ctx.ellipse(5.2, -4.0, 2.6, 2.0, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Sculpted Split Royal Cloak
+    const cloakGrad = ctx.createLinearGradient(0, -6.5, 0, 6.8);
     cloakGrad.addColorStop(0, '#38bdf8');
     cloakGrad.addColorStop(0.45, '#2563eb');
     cloakGrad.addColorStop(1, '#1e3a8a');
     ctx.fillStyle = cloakGrad;
-    ctx.strokeStyle = '#090d16';
-    ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(-6.2, -5.5);
-    ctx.lineTo(6.2, -5.5);
-    ctx.lineTo(7.8 + stride * 0.25, 6.8);
-    ctx.lineTo(-7.8 + stride * 0.25, 6.8);
+    ctx.moveTo(-5.4, -5.0);
+    ctx.lineTo(5.4, -5.0);
+    ctx.lineTo(6.8 + stride * 0.2, 6.2);
+    ctx.lineTo(0.8, 5.2);
+    ctx.lineTo(0, 3.0);
+    ctx.lineTo(-0.8, 5.2);
+    ctx.lineTo(-6.8 + stride * 0.2, 6.2);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    // Gold Cloak Trim & Sun Emblem
+    // Gold Trim & Royal Sun Crest
     ctx.fillStyle = '#facc15';
-    ctx.fillRect(-7.0 + stride * 0.2, 5.2, 14, 1.5);
+    ctx.fillRect(-6.0 + stride * 0.15, 4.8, 5.0, 1.2);
+    ctx.fillRect(1.0 + stride * 0.15, 4.8, 5.0, 1.2);
     ctx.beginPath();
-    ctx.arc(0, 0.2, 2.1, 0, Math.PI * 2);
+    ctx.arc(0, -0.6, 1.7, 0, Math.PI * 2);
     ctx.fill();
 
-    // Royal Hood (Back) + Crimson Feather Plume
-    const hoodGrad = ctx.createRadialGradient(-1, -9.5, 1, 0, -8.5, 6.5);
+    // Sculpted Peaked Ranger Hood (Not a round lollipop!)
+    const hoodGrad = ctx.createLinearGradient(0, -13.5, 0, -4.0);
     hoodGrad.addColorStop(0, '#60a5fa');
-    hoodGrad.addColorStop(1, '#1d4ed8');
+    hoodGrad.addColorStop(0.55, '#2563eb');
+    hoodGrad.addColorStop(1, '#1e3a8a');
     ctx.fillStyle = hoodGrad;
     ctx.beginPath();
-    ctx.arc(0, -8.2, 5.6, 0, Math.PI * 2);
+    ctx.moveTo(0, -13.2);
+    ctx.quadraticCurveTo(5.6, -11.2, 4.8, -5.0);
+    ctx.quadraticCurveTo(0, -3.8, -4.8, -5.0);
+    ctx.quadraticCurveTo(-5.6, -11.2, 0, -13.2);
+    ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    // Crimson Plume
+    // Crimson Ranger Plume
     ctx.fillStyle = '#f43f5e';
     ctx.beginPath();
-    ctx.moveTo(-1.5, -13.2);
-    ctx.quadraticCurveTo(-5.5, -16.5, -3.2, -10.2);
+    ctx.moveTo(-0.8, -12.8);
+    ctx.quadraticCurveTo(-5.4, -15.6, -3.6, -9.4);
     ctx.closePath();
     ctx.fill();
-  } else if (dir === 'down') {
-    // --- DOWN POSE: Expressive Ranger Front View + Bow Drawn Downward ---
-    // Flowing Back Cape
+  } else if (facingFront) {
+    // --- FRONT / DOWNWARD RANGER SILHOUETTE ---
     ctx.fillStyle = '#1e3a8a';
-    ctx.strokeStyle = '#090d16';
-    ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(-6.8, -5);
-    ctx.lineTo(6.8, -5);
-    ctx.lineTo(8.0, 6.5);
-    ctx.lineTo(-8.0, 6.5);
+    ctx.moveTo(-6.0, -4.8);
+    ctx.lineTo(6.0, -4.8);
+    ctx.lineTo(7.2, 5.8);
+    ctx.lineTo(-7.2, 5.8);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    // Royal Azure Tunic + Gold Belt & Baldric
-    const tunicGrad = ctx.createLinearGradient(0, -5, 0, 6);
+    // Tunic + Leather Baldric & Gold Buckle
+    const tunicGrad = ctx.createLinearGradient(0, -5, 0, 5.5);
     tunicGrad.addColorStop(0, '#38bdf8');
     tunicGrad.addColorStop(1, '#1d4ed8');
     ctx.fillStyle = tunicGrad;
     ctx.beginPath();
-    ctx.roundRect(-5.6, -5.2, 11.2, 11.2, 2);
+    ctx.roundRect(-5.0, -4.8, 10.0, 10.0, 2);
     ctx.fill();
     ctx.stroke();
+
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-4.2, -4.4);
+    ctx.lineTo(4.2, 2.2);
+    ctx.stroke();
+    ctx.lineWidth = 1.05;
+    ctx.strokeStyle = '#090d16';
 
     ctx.fillStyle = '#f59e0b';
-    ctx.fillRect(-5.4, 1.4, 10.8, 1.8);
+    ctx.fillRect(-4.8, 1.2, 9.6, 1.6);
     ctx.fillStyle = '#fef08a';
-    ctx.fillRect(-1.5, 1.2, 3, 2.2);
+    ctx.fillRect(-1.4, 1.0, 2.8, 2.0);
 
-    // Hood & Expressive Face
+    // Sculpted Peaked Cowl + Determined Ranger Face
     ctx.fillStyle = '#2563eb';
     ctx.beginPath();
-    ctx.arc(0, -8.5, 5.8, 0, Math.PI * 2);
+    ctx.moveTo(0, -13.4);
+    ctx.quadraticCurveTo(5.6, -11.2, 4.8, -5.2);
+    ctx.lineTo(-4.8, -5.2);
+    ctx.quadraticCurveTo(-5.6, -11.2, 0, -13.4);
+    ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    // Crimson Plume
-    ctx.fillStyle = '#f43f5e';
-    ctx.beginPath();
-    ctx.moveTo(1.5, -13.8);
-    ctx.quadraticCurveTo(6.0, -16.8, 4.2, -10.5);
-    ctx.closePath();
-    ctx.fill();
-
-    // Warm Peach Face & Fierce Eyes
     ctx.fillStyle = '#fed7aa';
     ctx.beginPath();
-    ctx.arc(0, -7.6, 3.9, 0, Math.PI * 2);
+    ctx.arc(0, -7.6, 3.4, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#0f172a';
-    ctx.fillRect(-2.3, -8.4, 1.3, 1.5);
-    ctx.fillRect(1.0, -8.4, 1.3, 1.5);
+    ctx.fillRect(-2.1, -8.3, 1.2, 1.4);
+    ctx.fillRect(0.9, -8.3, 1.2, 1.4);
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(-2.1, -8.4, 0.6, 0.6);
-    ctx.fillRect(1.2, -8.4, 0.6, 0.6);
+    ctx.fillRect(-1.9, -8.3, 0.55, 0.55);
+    ctx.fillRect(1.1, -8.3, 0.55, 0.55);
 
-    // Gilded Bow Held Forward-Down
-    ctx.save();
-    ctx.translate(0, 7.5);
+    // Peaked Hood Brow Rim + Plume
     ctx.strokeStyle = '#facc15';
-    ctx.lineWidth = 2.1;
+    ctx.lineWidth = 1.0;
     ctx.beginPath();
-    ctx.arc(0, -3.5, 8.5, Math.PI * 0.15, Math.PI * 0.85);
+    ctx.moveTo(-4.2, -9.4);
+    ctx.lineTo(0, -8.2);
+    ctx.lineTo(4.2, -9.4);
     ctx.stroke();
-    ctx.strokeStyle = '#fef08a';
-    ctx.lineWidth = 1.4;
+
+    ctx.fillStyle = '#f43f5e';
     ctx.beginPath();
-    ctx.moveTo(0, -3.5);
-    ctx.lineTo(0, 8.5);
-    ctx.stroke();
-    ctx.fillStyle = '#38bdf8';
-    ctx.beginPath();
-    ctx.moveTo(0, 11.5);
-    ctx.lineTo(-2.4, 7.5);
-    ctx.lineTo(2.4, 7.5);
+    ctx.moveTo(1.2, -13.0);
+    ctx.quadraticCurveTo(5.6, -15.8, 3.8, -9.8);
     ctx.closePath();
     ctx.fill();
-    ctx.restore();
   } else {
-    // --- LEFT / RIGHT PROFILE POSE: Classic Archer Side-Draw Silhouette ---
-    const flip = dir === 'left' ? -1 : 1;
-    ctx.scale(flip, 1);
+    // --- 3/4 ANGLED ARCHER STANCE (Ideal for Left, Right, and All 4 Diagonals!) ---
+    ctx.save();
+    ctx.scale(flipSide, 1);
 
-    // Streaming Back Cloak
-    ctx.fillStyle = '#1e40af';
+    // Streaming Royal Cloak behind shoulders
+    ctx.fillStyle = '#1e3a8a';
     ctx.strokeStyle = '#090d16';
-    ctx.lineWidth = 1.1;
+    ctx.lineWidth = 1.05;
     ctx.beginPath();
-    ctx.moveTo(-2, -5.5);
-    ctx.lineTo(-8.2 - Math.abs(stride) * 0.4, 5.8);
-    ctx.lineTo(-2.5, 6.2);
+    ctx.moveTo(-1.8, -4.8);
+    ctx.lineTo(-7.6 - Math.abs(stride) * 0.35, 5.6);
+    ctx.lineTo(-2.0, 5.8);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
@@ -672,121 +736,160 @@ function drawHDAdrian(
     // Quiver on Back
     ctx.fillStyle = '#78350f';
     ctx.beginPath();
-    ctx.roundRect(-6.8, -8.5, 3.4, 8.2, 1);
+    ctx.roundRect(-6.4, -8.2, 3.2, 7.8, 1);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(-7.5, -10.8, 1.3, 2.6);
-    ctx.fillRect(-5.8, -10.4, 1.3, 2.3);
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(-7.0, -10.4, 1.1, 2.4);
+    ctx.fillStyle = '#f43f5e';
+    ctx.fillRect(-5.5, -10.0, 1.1, 2.1);
 
-    // Tunic Body
-    const sideGrad = ctx.createLinearGradient(-4, -5, 5, 6);
+    // Armored Ranger Tunic + Pauldron + Belt
+    const sideGrad = ctx.createLinearGradient(-4, -5, 4.5, 5.5);
     sideGrad.addColorStop(0, '#38bdf8');
     sideGrad.addColorStop(1, '#1d4ed8');
     ctx.fillStyle = sideGrad;
     ctx.beginPath();
-    ctx.roundRect(-4.6, -5.2, 9.2, 11.0, 2);
+    ctx.roundRect(-4.4, -4.8, 8.8, 10.0, 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#92400e';
+    ctx.beginPath();
+    ctx.ellipse(-2.6, -3.8, 2.4, 1.8, -0.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
     ctx.fillStyle = '#facc15';
-    ctx.fillRect(-4.5, 1.5, 9.0, 1.7);
-    ctx.fillRect(-4.5, 4.5, 9.0, 1.1);
+    ctx.fillRect(-4.3, 1.2, 8.6, 1.5);
+    ctx.fillRect(-0.5, 0.9, 2.4, 2.0);
 
-    // Profile Hood, Plume & Face
+    // Peaked Ranger Hood + Focused Profile Face
     ctx.fillStyle = '#2563eb';
     ctx.beginPath();
-    ctx.arc(-0.3, -8.5, 5.5, 0, Math.PI * 2);
+    ctx.moveTo(-0.5, -13.2);
+    ctx.quadraticCurveTo(-5.6, -11.0, -4.6, -5.0);
+    ctx.lineTo(3.8, -5.0);
+    ctx.quadraticCurveTo(4.8, -10.6, -0.5, -13.2);
+    ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
     ctx.fillStyle = '#f43f5e';
     ctx.beginPath();
-    ctx.moveTo(-2.5, -13.2);
-    ctx.quadraticCurveTo(-8.5, -15.8, -5.8, -9.5);
+    ctx.moveTo(-2.0, -12.8);
+    ctx.quadraticCurveTo(-7.8, -15.4, -5.2, -9.2);
     ctx.closePath();
     ctx.fill();
 
     ctx.fillStyle = '#fed7aa';
     ctx.beginPath();
-    ctx.arc(1.8, -7.8, 3.4, -Math.PI * 0.45, Math.PI * 0.45);
-    ctx.lineTo(0.2, -4.6);
-    ctx.lineTo(0.2, -11.0);
+    ctx.arc(1.4, -7.6, 3.1, -Math.PI * 0.48, Math.PI * 0.48);
     ctx.closePath();
     ctx.fill();
     ctx.fillStyle = '#0f172a';
-    ctx.fillRect(2.3, -8.6, 1.3, 1.5);
+    ctx.fillRect(2.0, -8.4, 1.2, 1.4);
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(2.6, -8.6, 0.6, 0.6);
+    ctx.fillRect(2.3, -8.4, 0.55, 0.55);
 
-    // Side Recurve Bow & Drawn Glowing Arrow
-    const pull = resolved === 'draw' ? -2.5 : -0.8;
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.lineWidth = 0.85;
-    ctx.beginPath();
-    ctx.moveTo(6.2, -9.2);
-    ctx.lineTo(1.5 + pull, -1.5);
-    ctx.lineTo(6.2, 6.2);
-    ctx.stroke();
+    ctx.restore();
+  }
 
-    ctx.strokeStyle = '#facc15';
-    ctx.lineWidth = 2.2;
-    ctx.beginPath();
-    ctx.arc(3.2, -1.5, 8.5, -Math.PI * 0.4, Math.PI * 0.4);
-    ctx.stroke();
-
-    // Glowing Nocked Arrow pointing RIGHT (mirrored automatically for LEFT)
-    ctx.strokeStyle = '#fef08a';
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.moveTo(1.5 + pull, -1.5);
-    ctx.lineTo(13.2, -1.5);
-    ctx.stroke();
-    ctx.fillStyle = '#38bdf8';
-    ctx.beginPath();
-    ctx.moveTo(16.2, -1.5);
-    ctx.lineTo(12.2, -3.8);
-    ctx.lineTo(12.2, 0.8);
-    ctx.closePath();
-    ctx.fill();
+  if (sinA >= -0.15) {
+    drawOrbitalBow();
   }
 
   ctx.restore();
 
-  // 2. Crisp Golden 4-Way Cardinal Sightline & Directional Chevron (No Mouse Reticle!)
+  // 2. Comfortable 360° / Diagonal Trajectory Sightline & Precision Target Reticle!
   if (options?.showAimReticle) {
-    for (const dist of [18, 25]) {
-      const gx = x + cosA * dist;
-      const gy = y + sinA * dist;
-      ctx.fillStyle = 'rgba(125, 211, 252, 0.85)';
+    const hasCursor =
+      typeof options.cursorX === 'number' &&
+      typeof options.cursorY === 'number' &&
+      Number.isFinite(options.cursorX) &&
+      Number.isFinite(options.cursorY);
+
+    if (hasCursor) {
+      const cx = options.cursorX as number;
+      const cy = options.cursorY as number;
+      const totalDist = Math.hypot(cx - pivotX, cy - pivotY);
+
+      // Subtle dashed trajectory guide from bow tip (dist = 21) toward cursor
+      ctx.save();
+      ctx.strokeStyle = 'rgba(125, 211, 252, 0.34)';
+      ctx.lineWidth = 0.9;
+      ctx.setLineDash([2.5, 3.5]);
+      if (totalDist > 24) {
+        ctx.beginPath();
+        ctx.moveTo(pivotX + cosA * 20, pivotY + sinA * 20);
+        ctx.lineTo(
+          pivotX + cosA * Math.min(totalDist - 6, 130),
+          pivotY + sinA * Math.min(totalDist - 6, 130)
+        );
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+
+      // Sleek Royal Gold & Cyan Crosshair Ring at Mouse Cursor
+      ctx.translate(cx, cy);
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 1.1;
       ctx.beginPath();
-      ctx.arc(gx, gy, 1.3, 0, Math.PI * 2);
+      ctx.arc(0, 0, 5.2, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.0;
+      for (const [x0, y0, x1, y1] of [
+        [-7.8, 0, -3.4, 0],
+        [3.4, 0, 7.8, 0],
+        [0, -7.8, 0, -3.4],
+        [0, 3.4, 0, 7.8],
+      ]) {
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, 0, 1.1, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
+    } else {
+      // Crisp 8-Way (Cardinal + Diagonal!) Sightline Dots & Golden Chevron cleanly ahead of arrow tip
+      for (const dist of [23, 30]) {
+        const gx = pivotX + cosA * dist;
+        const gy = pivotY + sinA * dist;
+        ctx.fillStyle = 'rgba(125, 211, 252, 0.85)';
+        ctx.beginPath();
+        ctx.arc(gx, gy, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.save();
+      ctx.translate(pivotX + cosA * 38, pivotY + sinA * 38);
+      ctx.rotate(aimAngle);
+      ctx.fillStyle = '#facc15';
+      ctx.strokeStyle = '#090d16';
+      ctx.lineWidth = 0.85;
+      ctx.beginPath();
+      ctx.moveTo(3.8, 0);
+      ctx.lineTo(-2.2, -3.2);
+      ctx.lineTo(-0.8, 0);
+      ctx.lineTo(-2.2, 3.2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
     }
-    // Bold Golden Cardinal Chevron at dist = 33
-    ctx.save();
-    ctx.translate(x + cosA * 33, y + sinA * 33);
-    ctx.rotate(aimAngle);
-    ctx.fillStyle = '#facc15';
-    ctx.strokeStyle = '#090d16';
-    ctx.lineWidth = 0.9;
-    ctx.beginPath();
-    ctx.moveTo(4.2, 0);
-    ctx.lineTo(-2.5, -3.6);
-    ctx.lineTo(-1.0, 0);
-    ctx.lineTo(-2.5, 3.6);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
   }
 
-  // 3. Directional Muzzle Flash
+  // 3. Directional Muzzle Flash cleanly at Bow Tip (dist = 18)
   if (flash && flash !== 'none') {
     const flashKind: WeaponType =
       flash === 'single' ? 'single' : flash === 'double' ? 'double' : 'heavy';
-    const fx = Math.round(x + cosA * 15);
-    const fy = Math.round(y + sinA * 15);
+    const fx = Math.round(pivotX + cosA * 18);
+    const fy = Math.round(pivotY + sinA * 18);
     drawMuzzleFlash(ctx, fx, fy, flashKind, 0.4);
   }
 }
@@ -1502,21 +1605,60 @@ function drawHDGoblin(
   skinGrad.addColorStop(1, '#15803d');
   ctx.fillStyle = skinGrad;
   ctx.beginPath();
-  ctx.roundRect(-5.8, -2.5, 11.6, 10.2, 2.5);
+  ctx.roundRect(-6.2, -2.6, 12.4, 10.4, 2.8);
+  ctx.fill();
+  ctx.stroke();
+
+  // Cross-chest leather baldric + bronze ring
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 2.0;
+  ctx.beginPath();
+  ctx.moveTo(-5.2, -2.0);
+  ctx.lineTo(4.8, 4.2);
+  ctx.stroke();
+
+  // Iron Shoulder Pauldron (left shoulder)
+  ctx.fillStyle = '#64748b';
+  ctx.strokeStyle = '#090d16';
+  ctx.lineWidth = 1.0;
+  ctx.beginPath();
+  ctx.ellipse(-6.2, -1.2, 3.0, 2.2, -0.3, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
 
   // Studded Leather Belt & Bronze Skull Buckle
   ctx.fillStyle = '#78350f';
-  ctx.fillRect(-5.6, 3.4, 11.2, 3.4);
+  ctx.fillRect(-5.8, 3.4, 11.6, 3.4);
   ctx.fillStyle = '#f59e0b';
-  ctx.fillRect(-1.8, 3.2, 3.6, 3.0);
+  ctx.beginPath();
+  ctx.roundRect(-2.0, 3.1, 4.0, 3.2, 0.8);
+  ctx.fill();
+
+  // Off-hand Round Oak & Iron Raider Buckler (gives crisp warrior diameter & silhouette)
+  const bucklerY = 1.6 - stride * 0.25;
+  const bucklerGrad = ctx.createRadialGradient(-7.2, bucklerY - 1, 0.6, -6.8, bucklerY, 4.8);
+  bucklerGrad.addColorStop(0, '#d97706');
+  bucklerGrad.addColorStop(0.7, '#92400e');
+  bucklerGrad.addColorStop(1, '#451a03');
+  ctx.fillStyle = bucklerGrad;
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1.25;
+  ctx.beginPath();
+  ctx.arc(-6.8, bucklerY, 4.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#cbd5e1';
+  ctx.beginPath();
+  ctx.arc(-6.8, bucklerY, 1.5, 0, Math.PI * 2);
+  ctx.fill();
 
   // Pointed Goblin Ears (wide & unmistakable silhouette)
   ctx.fillStyle = '#22c55e';
+  ctx.strokeStyle = '#090d16';
+  ctx.lineWidth = 1.05;
   ctx.beginPath();
   ctx.moveTo(-5.2, -7.2);
-  ctx.lineTo(-11.2, -9.2);
+  ctx.lineTo(-11.4, -9.4);
   ctx.lineTo(-5.6, -3.8);
   ctx.closePath();
   ctx.fill();
@@ -1524,126 +1666,164 @@ function drawHDGoblin(
 
   ctx.beginPath();
   ctx.moveTo(5.2, -7.2);
-  ctx.lineTo(11.2, -9.2);
+  ctx.lineTo(11.4, -9.4);
   ctx.lineTo(5.6, -3.8);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
 
-  // Fierce Goblin Head
+  // Sculpted Goblin Head (jawed warrior contour rather than plain circle)
   ctx.fillStyle = skinGrad;
   ctx.beginPath();
-  ctx.arc(0, -6.2, 5.8, 0, Math.PI * 2);
+  ctx.moveTo(-5.8, -7.2);
+  ctx.quadraticCurveTo(0, -12.4, 5.8, -7.2);
+  ctx.quadraticCurveTo(5.6, -1.6, 0, -0.6);
+  ctx.quadraticCurveTo(-5.6, -1.6, -5.8, -7.2);
+  ctx.closePath();
   ctx.fill();
   ctx.stroke();
 
-  // Glowing Amber Eyes + Red Slit Pupils + White Fangs
+  // Fierce V-Shaped Brow Ridge + Glowing Amber Eyes + Red Slit Pupils
   ctx.fillStyle = stagger ? '#ffffff' : '#facc15';
   ctx.beginPath();
-  ctx.arc(-2.2, -6.4, 1.45, 0, Math.PI * 2);
-  ctx.arc(2.2, -6.4, 1.45, 0, Math.PI * 2);
+  ctx.ellipse(-2.3, -6.2, 1.6, 1.25, 0.2, 0, Math.PI * 2);
+  ctx.ellipse(2.3, -6.2, 1.6, 1.25, -0.2, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#dc2626';
-  ctx.fillRect(-2.5, -6.9, 0.8, 1.1);
-  ctx.fillRect(1.9, -6.9, 0.8, 1.1);
+  ctx.fillRect(-2.6, -6.8, 0.85, 1.2);
+  ctx.fillRect(1.9, -6.8, 0.85, 1.2);
+
+  ctx.strokeStyle = '#090d16';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-4.4, -7.6);
+  ctx.lineTo(-0.8, -6.5);
+  ctx.moveTo(4.4, -7.6);
+  ctx.lineTo(0.8, -6.5);
+  ctx.stroke();
 
   // Snarling Mouth & Twin White Fangs
   ctx.fillStyle = '#090d16';
-  ctx.fillRect(-3.2, -3.8, 6.4, stagger ? 2.4 : 1.5);
+  ctx.beginPath();
+  ctx.roundRect(-3.4, -3.9, 6.8, stagger ? 2.4 : 1.6, 0.7);
+  ctx.fill();
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.moveTo(-2.6, -2.3);
-  ctx.lineTo(-1.8, -4.4);
+  ctx.moveTo(-2.7, -2.3);
+  ctx.lineTo(-1.8, -4.5);
   ctx.lineTo(-1.0, -2.3);
   ctx.moveTo(1.0, -2.3);
-  ctx.lineTo(1.8, -4.4);
-  ctx.lineTo(2.6, -2.3);
+  ctx.lineTo(1.8, -4.5);
+  ctx.lineTo(2.7, -2.3);
   ctx.fill();
 
   // 2-HP Riveted Horned Iron-Bronze Helmet (stripped off when hp === 1!)
   if (hp >= 2) {
-    // Side Iron Horns
-    ctx.fillStyle = '#e7e5e4';
+    // Curved Side War-Horns
+    ctx.fillStyle = '#f5f5f4';
+    ctx.strokeStyle = '#090d16';
+    ctx.lineWidth = 1.0;
     ctx.beginPath();
     ctx.moveTo(-4.8, -9.5);
-    ctx.lineTo(-8.8, -13.2);
-    ctx.lineTo(-3.0, -11.2);
+    ctx.quadraticCurveTo(-8.8, -10.5, -9.4, -13.8);
+    ctx.quadraticCurveTo(-6.2, -12.6, -3.0, -11.2);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
     ctx.beginPath();
     ctx.moveTo(4.8, -9.5);
-    ctx.lineTo(8.8, -13.2);
-    ctx.lineTo(3.0, -11.2);
+    ctx.quadraticCurveTo(8.8, -10.5, 9.4, -13.8);
+    ctx.quadraticCurveTo(6.2, -12.6, 3.0, -11.2);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
     const helmGrad = ctx.createLinearGradient(-5, -13, 5, -8);
-    helmGrad.addColorStop(0, '#cbd5e1');
+    helmGrad.addColorStop(0, '#e2e8f0');
     helmGrad.addColorStop(0.5, '#64748b');
     helmGrad.addColorStop(1, '#334155');
     ctx.fillStyle = helmGrad;
     ctx.beginPath();
-    ctx.arc(0, -8.5, 5.9, Math.PI, 0);
+    ctx.arc(0, -8.5, 6.0, Math.PI, 0);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    // Bronze Crest & Rim
+    // Bronze Crest & Nose-Guard Rim
     ctx.fillStyle = '#f59e0b';
-    ctx.fillRect(-6.0, -9.2, 12.0, 1.5);
-    ctx.fillRect(-1.1, -14.2, 2.2, 5.2);
+    ctx.fillRect(-6.1, -9.2, 12.2, 1.5);
+    ctx.fillRect(-1.1, -14.4, 2.2, 5.4);
   } else {
     // Bare green scalp with scruffy dark tuft & battle bruise
     ctx.strokeStyle = '#14532d';
-    ctx.lineWidth = 0.9;
+    ctx.lineWidth = 1.0;
     ctx.beginPath();
-    ctx.moveTo(-2, -10.5);
-    ctx.lineTo(1.5, -9.2);
+    ctx.moveTo(-2.2, -10.6);
+    ctx.lineTo(1.6, -9.2);
     ctx.stroke();
   }
 
   // Weapon Arm: Blazing Siege Torch vs. Gleaming Steel Dagger
   if (!isDagger) {
-    // Torch Shaft
+    // Iron-banded Torch Shaft
     ctx.strokeStyle = '#78350f';
-    ctx.lineWidth = 2.2;
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(5.2, 1.5);
-    ctx.lineTo(9.2, -8.2);
+    ctx.moveTo(5.4, 1.8);
+    ctx.lineTo(9.4, -8.0);
     ctx.stroke();
 
-    // Multi-layered Animated Flame
-    const flickerY = (f % 2) * 1.3;
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(7.9, -8.6, 3.2, 1.6);
+
+    // Sculpted Teardrop Vector Torch Flame
+    const flickerY = (f % 2) * 1.4;
+    const swayX = f === 1 ? 0.7 : f === 3 ? -0.7 : 0;
     ctx.fillStyle = '#ea580c';
     ctx.beginPath();
-    ctx.arc(9.4, -10.2 - flickerY * 0.5, 4.0, 0, Math.PI * 2);
+    ctx.moveTo(9.5 + swayX, -15.6 - flickerY);
+    ctx.quadraticCurveTo(13.8, -11.4, 12.2, -8.2);
+    ctx.quadraticCurveTo(9.5, -6.6, 6.8, -8.2);
+    ctx.quadraticCurveTo(5.4, -11.4, 9.5 + swayX, -15.6 - flickerY);
     ctx.fill();
+
     ctx.fillStyle = '#facc15';
     ctx.beginPath();
-    ctx.arc(9.4, -10.0 - flickerY * 0.3, 2.6, 0, Math.PI * 2);
+    ctx.moveTo(9.5 + swayX * 0.6, -13.6 - flickerY * 0.7);
+    ctx.quadraticCurveTo(12.2, -10.8, 11.2, -8.5);
+    ctx.quadraticCurveTo(9.5, -7.4, 7.8, -8.5);
+    ctx.quadraticCurveTo(6.8, -10.8, 9.5 + swayX * 0.6, -13.6 - flickerY * 0.7);
     ctx.fill();
+
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(9.4, -9.6, 1.3, 0, Math.PI * 2);
+    ctx.arc(9.5, -9.5, 1.35, 0, Math.PI * 2);
     ctx.fill();
   } else {
-    // Raised Wicked Steel Dagger
+    // Raised Wicked Double-Edged Steel Assassin Dagger
     const bladeRaise = step === 0 ? -1.5 : 1.0;
     ctx.save();
-    ctx.translate(7.5, -2.5 + bladeRaise);
-    ctx.rotate(-0.35);
+    ctx.translate(7.8, -2.5 + bladeRaise);
+    ctx.rotate(-0.32);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(-1.1, 1.8, 2.2, 2.8);
     ctx.fillStyle = '#f59e0b';
-    ctx.fillRect(-2.5, 1.5, 5.0, 1.6);
-    ctx.fillStyle = '#e2e8f0';
-    ctx.strokeStyle = '#090d16';
-    ctx.lineWidth = 0.9;
     ctx.beginPath();
-    ctx.moveTo(0, -8.2);
-    ctx.lineTo(2.2, 1.5);
-    ctx.lineTo(-2.2, 1.5);
+    ctx.roundRect(-3.0, 1.2, 6.0, 1.6, 0.6);
+    ctx.fill();
+    const bladeGrad = ctx.createLinearGradient(-2.4, 0, 2.4, 0);
+    bladeGrad.addColorStop(0, '#f8fafc');
+    bladeGrad.addColorStop(0.5, '#cbd5e1');
+    bladeGrad.addColorStop(1, '#64748b');
+    ctx.fillStyle = bladeGrad;
+    ctx.strokeStyle = '#090d16';
+    ctx.lineWidth = 0.95;
+    ctx.beginPath();
+    ctx.moveTo(0, -9.2);
+    ctx.lineTo(2.5, 1.2);
+    ctx.lineTo(-2.5, 1.2);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
@@ -2443,6 +2623,124 @@ export function drawRotatingShield(
   lodgedArrows: readonly (number | LodgedArrowView)[] = [],
   flash = false
 ): void {
+  if (isHDCanvas(ctx)) {
+    const outerR = 14.5;
+    const innerR = 9.0;
+    const rMid = (outerR + innerR) / 2;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Subtle ground shadow beneath rotating shield bastion
+    ctx.fillStyle = 'rgba(4, 7, 14, 0.48)';
+    ctx.beginPath();
+    ctx.arc(0, 2.2, outerR + 1.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 1. 4 Iron-Bound Oak Spokes
+    for (let i = 0; i < 4; i++) {
+      const spokeAngle = angle + (i * Math.PI) / 2;
+      ctx.save();
+      ctx.rotate(spokeAngle);
+      ctx.fillStyle = flash ? '#ffffff' : '#78350f';
+      ctx.strokeStyle = '#1c1917';
+      ctx.lineWidth = 0.85;
+      ctx.beginPath();
+      ctx.roundRect(0, -1.6, innerR + 1.5, 3.2, 1.0);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = flash ? '#fef08a' : '#d97706';
+      ctx.fillRect(2, -0.6, innerR - 1, 1.2);
+      ctx.restore();
+    }
+
+    // 2. Outer Rim Segments (Gleaming Blue-Iron vs. Warm Targetable Oak)
+    for (const seg of segments) {
+      if (seg.type === 'wood' && seg.hp <= 0) continue;
+      const a0 = angle + seg.startAngle + 0.03;
+      const a1 = angle + seg.endAngle - 0.03;
+
+      // Dark outer rim casing
+      ctx.strokeStyle = seg.type === 'iron' ? '#0f172a' : '#291507';
+      ctx.lineWidth = 6.2;
+      ctx.lineCap = 'butt';
+      ctx.beginPath();
+      ctx.arc(0, 0, rMid, a0 - 0.02, a1 + 0.02);
+      ctx.stroke();
+
+      // Main beveled arc body
+      if (flash) {
+        ctx.strokeStyle = '#ffffff';
+      } else if (seg.type === 'iron') {
+        const ironGrad = ctx.createLinearGradient(-outerR, -outerR, outerR, outerR);
+        ironGrad.addColorStop(0, '#bae6fd');
+        ironGrad.addColorStop(0.45, '#3b82f6');
+        ironGrad.addColorStop(1, '#1e3a8a');
+        ctx.strokeStyle = ironGrad;
+      } else {
+        const damaged = seg.hp < seg.maxHp;
+        const woodGrad = ctx.createLinearGradient(-outerR, -outerR, outerR, outerR);
+        woodGrad.addColorStop(0, damaged ? '#b45309' : '#f59e0b');
+        woodGrad.addColorStop(0.5, damaged ? '#78350f' : '#b45309');
+        woodGrad.addColorStop(1, '#451a03');
+        ctx.strokeStyle = woodGrad;
+      }
+      ctx.lineWidth = 4.4;
+      ctx.beginPath();
+      ctx.arc(0, 0, rMid, a0, a1);
+      ctx.stroke();
+
+      // Outer specular rim highlight
+      ctx.strokeStyle = flash
+        ? '#ffffff'
+        : seg.type === 'iron'
+          ? 'rgba(224, 242, 254, 0.85)'
+          : 'rgba(253, 230, 138, 0.65)';
+      ctx.lineWidth = 0.95;
+      ctx.beginPath();
+      ctx.arc(0, 0, outerR - 0.8, a0 + 0.04, a1 - 0.04);
+      ctx.stroke();
+
+      // Rivets along arc
+      const midA = (a0 + a1) / 2;
+      for (const rivetA of [a0 + 0.16, midA, a1 - 0.16]) {
+        const rx = Math.cos(rivetA) * rMid;
+        const ry = Math.sin(rivetA) * rMid;
+        ctx.fillStyle = seg.type === 'iron' ? '#f8fafc' : '#fcd34d';
+        ctx.beginPath();
+        ctx.arc(rx, ry, 0.95, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 3. Domed Steel & Brass Central Boss Hub
+    const hubGrad = ctx.createRadialGradient(-1.5, -1.5, 0.5, 0, 0, 5.4);
+    hubGrad.addColorStop(0, '#f8fafc');
+    hubGrad.addColorStop(0.45, '#60a5fa');
+    hubGrad.addColorStop(0.85, '#1e3a8a');
+    hubGrad.addColorStop(1, '#0f172a');
+    ctx.fillStyle = hubGrad;
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(0, 0, 4.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+
+    // 4. Lodged arrows rotating with the shield wheel
+    for (const item of lodgedArrows) {
+      const offset =
+        typeof item === 'number' ? item : (item.angleOffset ?? item.angle ?? 0);
+      const worldAngle = angle + offset;
+      const rimX = x + Math.cos(worldAngle) * outerR;
+      const rimY = y + Math.sin(worldAngle) * outerR;
+      drawLodgedArrow(ctx, rimX, rimY, worldAngle - Math.PI / 2);
+    }
+    return;
+  }
+
   const cx = Math.round(x);
   const cy = Math.round(y);
   const outerR = 14;
@@ -2604,6 +2902,84 @@ export function drawSingleArrow(
   slowed = false,
   frame = 0
 ): void {
+  if (isHDCanvas(ctx)) {
+    ctx.save();
+    ctx.translate(x, y);
+    if (angle !== 0) {
+      ctx.rotate(angle);
+    }
+
+    // 1. Smooth Tapered Aerodynamic Slipstream Wake (pointing UP along -Y)
+    const trailLen = slowed ? 11 : 20 + (frame % 3) * 2.5;
+    const wakeGrad = ctx.createLinearGradient(0, 6.5, 0, 6.5 + trailLen);
+    wakeGrad.addColorStop(0, slowed ? 'rgba(251, 191, 36, 0.78)' : 'rgba(254, 249, 195, 0.88)');
+    wakeGrad.addColorStop(0.45, slowed ? 'rgba(217, 119, 6, 0.35)' : 'rgba(56, 189, 248, 0.38)');
+    wakeGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = wakeGrad;
+    ctx.beginPath();
+    ctx.moveTo(-2.1, 6.5);
+    ctx.lineTo(2.1, 6.5);
+    ctx.lineTo(0.4, 6.5 + trailLen);
+    ctx.lineTo(-0.4, 6.5 + trailLen);
+    ctx.closePath();
+    ctx.fill();
+
+    // 2. Crisp Angled Royal Feather Vanes (crimson & pearl white)
+    ctx.fillStyle = '#f8fafc';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(-0.7, 3.8);
+    ctx.lineTo(-3.1, 6.4);
+    ctx.lineTo(-2.4, 8.2);
+    ctx.lineTo(-0.5, 6.8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.moveTo(0.7, 3.8);
+    ctx.lineTo(3.1, 6.4);
+    ctx.lineTo(2.4, 8.2);
+    ctx.lineTo(0.5, 6.8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 3. Polished Yew-Wood Shaft + Gold Binding Thread
+    ctx.fillStyle = '#d97706';
+    ctx.strokeStyle = '#1c1917';
+    ctx.lineWidth = 0.65;
+    ctx.beginPath();
+    ctx.roundRect(-0.95, -4.5, 1.9, 11.4, 0.6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#fde047';
+    ctx.fillRect(-1.0, 3.4, 2.0, 1.1);
+
+    // 4. Razor-Sharp Diamond Bodkin Steel Broadhead (tip at y = -9.2)
+    const tipGrad = ctx.createLinearGradient(-2.8, -6, 2.8, -6);
+    tipGrad.addColorStop(0, '#ffffff');
+    tipGrad.addColorStop(0.5, '#cbd5e1');
+    tipGrad.addColorStop(1, '#475569');
+    ctx.fillStyle = tipGrad;
+    ctx.strokeStyle = '#090d16';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(0, -9.2);
+    ctx.lineTo(2.8, -3.6);
+    ctx.lineTo(1.0, -4.6);
+    ctx.lineTo(-1.0, -4.6);
+    ctx.lineTo(-2.8, -3.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+    return;
+  }
+
   ctx.save();
   ctx.translate(Math.round(x), Math.round(y));
   if (angle !== 0) {
@@ -2631,6 +3007,41 @@ export function drawLodgedArrow(
   y: number,
   angle = 0
 ): void {
+  if (isHDCanvas(ctx)) {
+    ctx.save();
+    ctx.translate(x, y);
+    if (angle !== 0) {
+      ctx.rotate(angle);
+    }
+    ctx.fillStyle = '#b45309';
+    ctx.strokeStyle = '#1c1917';
+    ctx.lineWidth = 0.65;
+    ctx.beginPath();
+    ctx.roundRect(-0.85, 0, 1.7, 8.2, 0.5);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.beginPath();
+    ctx.moveTo(-0.7, 5.2);
+    ctx.lineTo(-2.6, 7.6);
+    ctx.lineTo(-2.0, 9.0);
+    ctx.lineTo(-0.5, 7.8);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.moveTo(0.7, 5.2);
+    ctx.lineTo(2.6, 7.6);
+    ctx.lineTo(2.0, 9.0);
+    ctx.lineTo(0.5, 7.8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    return;
+  }
+
   ctx.save();
   ctx.translate(Math.round(x), Math.round(y));
   if (angle !== 0) {
@@ -2650,9 +3061,9 @@ export function drawDoubleArrow(
   slowed = false,
   frame = 0
 ): void {
-  const halfSpread = Math.round(spread / 2);
+  const halfSpread = isHDCanvas(ctx) ? spread / 2 : Math.round(spread / 2);
   ctx.save();
-  ctx.translate(Math.round(x), Math.round(y));
+  ctx.translate(isHDCanvas(ctx) ? x : Math.round(x), isHDCanvas(ctx) ? y : Math.round(y));
   if (angle !== 0) {
     ctx.rotate(angle);
   }
@@ -2668,6 +3079,117 @@ export function drawGreatArrow(
   angle = 0,
   frame = 0
 ): void {
+  if (isHDCanvas(ctx)) {
+    ctx.save();
+    ctx.translate(x, y);
+    if (angle !== 0) {
+      ctx.rotate(angle);
+    }
+
+    // 1. Radial Blazing Siege Aura
+    const aura = ctx.createRadialGradient(0, -2, 1, 0, 0, 13);
+    aura.addColorStop(0, 'rgba(254, 240, 138, 0.55)');
+    aura.addColorStop(0.55, 'rgba(249, 115, 22, 0.26)');
+    aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(0, 0, 13, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Fiery Tapered Jet Wake
+    const wakeLen = 20 + (frame % 4) * 2.5;
+    const wakeGrad = ctx.createLinearGradient(0, 9, 0, 9 + wakeLen);
+    wakeGrad.addColorStop(0, 'rgba(255, 251, 235, 0.95)');
+    wakeGrad.addColorStop(0.35, 'rgba(250, 204, 21, 0.80)');
+    wakeGrad.addColorStop(0.7, 'rgba(234, 88, 12, 0.42)');
+    wakeGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = wakeGrad;
+    ctx.beginPath();
+    ctx.moveTo(-3.6, 9);
+    ctx.lineTo(3.6, 9);
+    ctx.lineTo(0.8, 9 + wakeLen);
+    ctx.lineTo(-0.8, 9 + wakeLen);
+    ctx.closePath();
+    ctx.fill();
+
+    // 3. Swept Supersonic Wind Shockwave Curves
+    ctx.strokeStyle = 'rgba(254, 249, 195, 0.82)';
+    ctx.lineWidth = 1.1;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-3.2, -3.5);
+    ctx.quadraticCurveTo(-6.8, 1.5, -7.6, 8.0);
+    ctx.moveTo(3.2, -3.5);
+    ctx.quadraticCurveTo(6.8, 1.5, 7.6, 8.0);
+    ctx.stroke();
+
+    // 4. Layered Golden-Crimson Siege Fletching
+    ctx.fillStyle = '#facc15';
+    ctx.strokeStyle = '#090d16';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(-1.4, 4.8);
+    ctx.lineTo(-4.8, 8.2);
+    ctx.lineTo(-3.8, 11.2);
+    ctx.lineTo(-1.2, 9.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#f97316';
+    ctx.beginPath();
+    ctx.moveTo(1.4, 4.8);
+    ctx.lineTo(4.8, 8.2);
+    ctx.lineTo(3.8, 11.2);
+    ctx.lineTo(1.2, 9.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 5. Heavy Iron-Banded Oak Lance Shaft
+    ctx.fillStyle = '#b45309';
+    ctx.strokeStyle = '#1c1917';
+    ctx.lineWidth = 0.85;
+    ctx.beginPath();
+    ctx.roundRect(-1.7, -4.5, 3.4, 14.2, 0.9);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#fde047';
+    ctx.fillRect(-1.9, -3.6, 3.8, 1.8);
+    ctx.fillRect(-1.8, 4.4, 3.6, 1.4);
+
+    // 6. Massive Barbed Siege Broadhead (9px wingspan, tip at y = -12.5)
+    const headGrad = ctx.createLinearGradient(-4.6, -8, 4.6, -8);
+    headGrad.addColorStop(0, '#ffffff');
+    headGrad.addColorStop(0.45, '#e2e8f0');
+    headGrad.addColorStop(1, '#64748b');
+    ctx.fillStyle = headGrad;
+    ctx.strokeStyle = '#090d16';
+    ctx.lineWidth = 0.95;
+    ctx.beginPath();
+    ctx.moveTo(0, -12.6);
+    ctx.lineTo(4.6, -4.2);
+    ctx.lineTo(2.9, -2.6);
+    ctx.lineTo(1.6, -4.6);
+    ctx.lineTo(-1.6, -4.6);
+    ctx.lineTo(-2.9, -2.6);
+    ctx.lineTo(-4.6, -4.2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Central golden fuller rune
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1.0;
+    ctx.beginPath();
+    ctx.moveTo(0, -10.2);
+    ctx.lineTo(0, -4.8);
+    ctx.stroke();
+
+    ctx.restore();
+    return;
+  }
+
   ctx.save();
   ctx.translate(Math.round(x), Math.round(y));
   if (angle !== 0) {
@@ -2728,6 +3250,44 @@ export function drawMuzzleFlash(
   progress = 0.5
 ): void {
   if (progress < 0 || progress > 1) return;
+
+  if (isHDCanvas(ctx)) {
+    const alpha = Math.max(0.15, 1 - progress * 0.85);
+    const drawBurst = (bx: number, by: number, radius: number, coreCol: string, outerCol: string) => {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      const g = ctx.createRadialGradient(bx, by, 0.5, bx, by, radius);
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(0.35, coreCol);
+      g.addColorStop(0.75, outerCol);
+      g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(bx, by, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(bx - radius * 0.8, by);
+      ctx.lineTo(bx + radius * 0.8, by);
+      ctx.moveTo(bx, by - radius * 0.8);
+      ctx.lineTo(bx, by + radius * 0.8);
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    if (weaponType === 'single') {
+      drawBurst(x, y, 6.5, '#fef08a', 'rgba(249, 115, 22, 0.45)');
+    } else if (weaponType === 'double') {
+      drawBurst(x - 4.5, y, 5.8, '#bae6fd', 'rgba(56, 189, 248, 0.45)');
+      drawBurst(x + 4.5, y, 5.8, '#fef08a', 'rgba(249, 115, 22, 0.45)');
+    } else {
+      drawBurst(x, y, 11.5, '#fde047', 'rgba(234, 88, 12, 0.65)');
+    }
+    return;
+  }
+
   const cx = Math.round(x);
   const cy = Math.round(y);
 
@@ -2839,6 +3399,52 @@ export function drawImpactBurst(
   type: 'normal' | 'wide_multi_hit' | 'piercing_shatter' | 'iron_deflect' | 'arrow_clip',
   progress = 0.3
 ): void {
+  if (isHDCanvas(ctx)) {
+    const rad = Math.max(4, (1 - progress * 0.45) * (type === 'piercing_shatter' ? 14 : 9));
+    const drawHDStar = (bx: number, by: number, outer: string, inner: string) => {
+      ctx.save();
+      const g = ctx.createRadialGradient(bx, by, 0.5, bx, by, rad);
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(0.4, inner);
+      g.addColorStop(0.8, outer);
+      g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(bx, by, rad, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = inner;
+      ctx.lineWidth = 1.25;
+      for (let i = 0; i < 4; i++) {
+        const a = (i * Math.PI) / 4;
+        ctx.beginPath();
+        ctx.moveTo(bx - Math.cos(a) * rad * 0.9, by - Math.sin(a) * rad * 0.9);
+        ctx.lineTo(bx + Math.cos(a) * rad * 0.9, by + Math.sin(a) * rad * 0.9);
+        ctx.stroke();
+      }
+      ctx.restore();
+    };
+
+    if (type === 'normal') {
+      drawHDStar(x, y, 'rgba(249, 115, 22, 0.45)', '#fde047');
+    } else if (type === 'wide_multi_hit') {
+      drawHDStar(x - 5, y, 'rgba(249, 115, 22, 0.45)', '#fde047');
+      drawHDStar(x + 5, y, 'rgba(249, 115, 22, 0.45)', '#fde047');
+    } else if (type === 'piercing_shatter') {
+      drawHDStar(x, y, 'rgba(234, 88, 12, 0.65)', '#fef08a');
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.78)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(x, y, 5 + progress * 11, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (type === 'iron_deflect') {
+      drawHDStar(x, y, 'rgba(56, 189, 248, 0.55)', '#e0f2fe');
+    } else {
+      drawHDStar(x, y, 'rgba(220, 38, 38, 0.55)', '#fdba74');
+    }
+    return;
+  }
+
   const cx = Math.round(x);
   const cy = Math.round(y);
   const r = Math.max(2, Math.round((1 - progress * 0.5) * 6));
@@ -2936,6 +3542,45 @@ export function drawHeart(
   active = true,
   flash = false
 ): void {
+  if (isHDCanvas(ctx)) {
+    const cx = x + 5;
+    const cy = y + 4.5;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.beginPath();
+    ctx.moveTo(0, 4.4);
+    ctx.bezierCurveTo(-5.4, 1.0, -5.6, -3.8, -2.5, -4.1);
+    ctx.bezierCurveTo(-0.8, -4.2, -0.1, -2.6, 0, -2.0);
+    ctx.bezierCurveTo(0.1, -2.6, 0.8, -4.2, 2.5, -4.1);
+    ctx.bezierCurveTo(5.6, -3.8, 5.4, 1.0, 0, 4.4);
+    ctx.closePath();
+
+    if (flash) {
+      ctx.fillStyle = '#ffffff';
+    } else if (active) {
+      const hg = ctx.createRadialGradient(-1.5, -2.0, 0.5, 0, 0, 5.5);
+      hg.addColorStop(0, '#fda4af');
+      hg.addColorStop(0.45, '#ef4444');
+      hg.addColorStop(1, '#991b1b');
+      ctx.fillStyle = hg;
+    } else {
+      ctx.fillStyle = '#272030';
+    }
+    ctx.strokeStyle = active ? '#450a0a' : '#0f172a';
+    ctx.lineWidth = 0.9;
+    ctx.fill();
+    ctx.stroke();
+
+    if (active && !flash) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.78)';
+      ctx.beginPath();
+      ctx.ellipse(-2.1, -2.1, 1.1, 0.65, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    return;
+  }
+
   blitMatrixSprite(
     ctx,
     active ? 'heart_active' : 'heart_lost',
@@ -3455,6 +4100,46 @@ export function drawFloorSpike(
   width = 24,
   frame = 0
 ): void {
+  if (isHDCanvas(ctx)) {
+    const halfW = width / 2;
+    const left = x - halfW;
+    const top = y - 5;
+    const glint = Math.floor(frame / 18) % 3 === 0;
+
+    ctx.save();
+    // Recessed iron grate plate
+    ctx.fillStyle = '#090d16';
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.roundRect(left, top + 6.5, width, 4.4, 1.4);
+    ctx.fill();
+    ctx.stroke();
+
+    // Conical 3D steel spike blades
+    const count = Math.max(2, Math.floor(width / 6));
+    const stepW = width / count;
+    for (let i = 0; i < count; i++) {
+      const sx = left + i * stepW + stepW * 0.5;
+      const bladeGrad = ctx.createLinearGradient(sx - 2.4, top, sx + 2.4, top + 8);
+      bladeGrad.addColorStop(0, glint && i % 2 === 0 ? '#ffffff' : '#f1f5f9');
+      bladeGrad.addColorStop(0.5, '#94a3b8');
+      bladeGrad.addColorStop(1, '#334155');
+      ctx.fillStyle = bladeGrad;
+      ctx.strokeStyle = '#090d16';
+      ctx.lineWidth = 0.75;
+      ctx.beginPath();
+      ctx.moveTo(sx, top - 0.8);
+      ctx.lineTo(sx + 2.3, top + 8.0);
+      ctx.lineTo(sx - 2.3, top + 8.0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+    return;
+  }
+
   const halfW = Math.round(width / 2);
   const left = Math.round(x - halfW);
   const top = Math.round(y - 5);
@@ -3488,9 +4173,78 @@ export function drawEnemyProjectile(
   proj: { kind: 'dagger' | 'fireball'; x: number; y: number; angle?: number; frame?: number },
   animTick = 0
 ): void {
+  const frame = proj.frame ?? animTick;
+
+  if (isHDCanvas(ctx)) {
+    ctx.save();
+    ctx.translate(proj.x, proj.y);
+
+    if (proj.kind === 'dagger') {
+      const spinAngle = proj.angle ?? frame * 0.35;
+      // Crisp silver-emerald spin blur ring showing exact collision diameter (r = 5.6)
+      ctx.strokeStyle = 'rgba(186, 230, 253, 0.45)';
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.arc(0, 0, 5.6, spinAngle, spinAngle + Math.PI * 1.35);
+      ctx.stroke();
+
+      ctx.rotate(spinAngle);
+      // Leather grip + brass crossguard
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(-1.0, 2.5, 2.0, 3.0);
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.roundRect(-2.8, 1.4, 5.6, 1.4, 0.5);
+      ctx.fill();
+
+      // Double-edged gleaming steel dagger blade
+      const dg = ctx.createLinearGradient(-2.2, 0, 2.2, 0);
+      dg.addColorStop(0, '#ffffff');
+      dg.addColorStop(0.5, '#cbd5e1');
+      dg.addColorStop(1, '#475569');
+      ctx.fillStyle = dg;
+      ctx.strokeStyle = '#090d16';
+      ctx.lineWidth = 0.85;
+      ctx.beginPath();
+      ctx.moveTo(0, -6.4);
+      ctx.lineTo(2.2, 1.4);
+      ctx.lineTo(-2.2, 1.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      // Smooth Round Molten Goblin Fireball Orb + Flickering Flame Corona (replaces square fillRects!)
+      const pulse = Math.sin(frame * 0.45) * 0.6;
+      const glow = ctx.createRadialGradient(0, 0, 1, 0, 0, 11.5 + pulse);
+      glow.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+      glow.addColorStop(0.3, 'rgba(250, 204, 21, 0.85)');
+      glow.addColorStop(0.62, 'rgba(234, 88, 12, 0.55)');
+      glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(0, 0, 11.5 + pulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Outer crimson-orange molten shell (exact visible threat diameter r = 4.6)
+      const orbGrad = ctx.createRadialGradient(-1.2, -1.2, 0.5, 0, 0, 4.8);
+      orbGrad.addColorStop(0, '#ffffff');
+      orbGrad.addColorStop(0.38, '#fef08a');
+      orbGrad.addColorStop(0.72, '#f97316');
+      orbGrad.addColorStop(1, '#b91c1c');
+      ctx.fillStyle = orbGrad;
+      ctx.strokeStyle = '#7f1d1d';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.arc(0, 0, 4.6 + pulse * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+    return;
+  }
+
   const cx = Math.round(proj.x);
   const cy = Math.round(proj.y);
-  const frame = proj.frame ?? animTick;
 
   if (proj.kind === 'dagger') {
     ctx.save();
@@ -3508,16 +4262,6 @@ export function drawEnemyProjectile(
     ctx.fillRect(-1, 4, 3, 2);
     ctx.restore();
   } else {
-    if (isHDCanvas(ctx)) {
-      const glow = ctx.createRadialGradient(cx, cy, 1, cx, cy, 10);
-      glow.addColorStop(0, 'rgba(254, 240, 138, 0.9)');
-      glow.addColorStop(0.5, 'rgba(249, 115, 22, 0.6)');
-      glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 10, 0, Math.PI * 2);
-      ctx.fill();
-    }
     const pulse = frame % 2;
     ctx.fillStyle = '#991b1b';
     ctx.fillRect(cx - 4, cy - 4, 9, 9);
@@ -3538,6 +4282,74 @@ export function drawPickupItem(
   pickup: { kind: 'double_ammo' | 'heavy_ammo' | 'heart'; x: number; y: number; bobPhase?: number },
   animTick = 0
 ): void {
+  if (isHDCanvas(ctx)) {
+    const bob = Math.sin(animTick * 0.14 + (pickup.bobPhase ?? 0)) * 1.6;
+    const cx = pickup.x;
+    const cy = pickup.y + bob;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // Golden royal halo + gilded circular medallion (r = 6.8)
+    const halo = ctx.createRadialGradient(0, 0, 2, 0, 0, 11.5);
+    halo.addColorStop(0, 'rgba(250, 204, 21, 0.45)');
+    halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(0, 0, 11.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = pickup.kind === 'double_ammo' ? '#0f294a' : pickup.kind === 'heavy_ammo' ? '#431407' : '#2e1022';
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.arc(0, 0, 6.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    if (pickup.kind === 'heart') {
+      ctx.restore();
+      drawHeart(ctx, cx - 5, cy - 4.5, true, false);
+      return;
+    }
+
+    if (pickup.kind === 'double_ammo') {
+      // Crisp twin cyan-gold miniature arrows
+      for (const ox of [-2.1, 2.1]) {
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.moveTo(ox, 3.8);
+        ctx.lineTo(ox, -2.6);
+        ctx.stroke();
+        ctx.fillStyle = '#fde047';
+        ctx.beginPath();
+        ctx.moveTo(ox, -4.4);
+        ctx.lineTo(ox + 1.8, -1.6);
+        ctx.lineTo(ox - 1.8, -1.6);
+        ctx.closePath();
+        ctx.fill();
+      }
+    } else {
+      // Blazing heavy great-arrow emblem
+      ctx.strokeStyle = '#fb923c';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.moveTo(0, 4.2);
+      ctx.lineTo(0, -2.2);
+      ctx.stroke();
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.moveTo(0, -4.8);
+      ctx.lineTo(3.2, -1.0);
+      ctx.lineTo(-3.2, -1.0);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+    return;
+  }
+
   const bob = Math.round(Math.sin(animTick * 0.14 + (pickup.bobPhase ?? 0)) * 1.5);
   const cx = Math.round(pickup.x);
   const cy = Math.round(pickup.y + bob);
