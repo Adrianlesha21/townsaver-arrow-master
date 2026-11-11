@@ -21,6 +21,7 @@ import {
   ARROW_SPAWN_Y,
   ArrowEntity,
   COLUMNS,
+  CardinalDirection,
   EnemyProjectile,
   FacingDirection,
   FailReason,
@@ -86,6 +87,7 @@ export class GameEngine {
   private storyModeEnabled: boolean;
   private moveInputX = 0;
   private moveInputY = 0;
+  private preferredCardinal: CardinalDirection | null = null;
   private autoStepActive = false;
 
   private state: GameState;
@@ -158,6 +160,7 @@ export class GameEngine {
         gateWidth: 64,
         unlocked: false,
         rescued: false,
+        portcullisProgress: 0,
       },
       story: initialStory,
       prologueIndex: 0,
@@ -180,6 +183,8 @@ export class GameEngine {
       heartFlashTimer: 0,
       statusBanner: null,
       bannerTimer: 0,
+      queenCalloutText: null,
+      queenCalloutTimer: 0,
       lastFailReason: 'none',
       stageClearTimer: 0,
       breachResetTimer: 0,
@@ -268,6 +273,7 @@ export class GameEngine {
     this.autoStepActive = false;
     this.moveInputX = 0;
     this.moveInputY = 0;
+    this.preferredCardinal = null;
 
     const targets: TargetEntity[] = config.targets.map((t, idx) => {
       const kind = t.kind ?? t.type ?? 'goblin_torch';
@@ -404,6 +410,7 @@ export class GameEngine {
       gateWidth: 64,
       unlocked: reqCount === 0,
       rescued: false,
+      portcullisProgress: reqCount === 0 ? 1 : 0,
     };
 
     if (!options.preserveScore && clampedStage === 1) {
@@ -447,6 +454,9 @@ export class GameEngine {
     this.state.heartFlashTimer = 0;
     this.state.statusBanner = null;
     this.state.bannerTimer = 0;
+    this.state.useMouseAim = false;
+    this.state.aimCursorX = null;
+    this.state.aimCursorY = null;
     this.state.stageClearTimer = 0;
     this.state.breachResetTimer = 0;
     this.state.lastFailReason = 'none';
@@ -459,6 +469,15 @@ export class GameEngine {
       this.state.status = 'briefing';
     } else {
       this.state.status = 'playing';
+    }
+
+    if (this.state.status === 'playing' && this.storyModeEnabled) {
+      this.state.queenCalloutText =
+        story.queenCastleCallout ?? '"Adrian! Over here—strike down the guards!"';
+      this.state.queenCalloutTimer = 4.2;
+    } else {
+      this.state.queenCalloutText = null;
+      this.state.queenCalloutTimer = 0;
     }
 
     return this.getState();
@@ -497,6 +516,11 @@ export class GameEngine {
     if (this.state.status === 'briefing' || this.state.status === 'title') {
       this.sound?.playStoryAdvance();
       this.state.status = 'playing';
+      if (this.storyModeEnabled) {
+        this.state.queenCalloutText =
+          this.state.story.queenCastleCallout ?? '"Adrian! Over here—strike down the guards!"';
+        this.state.queenCalloutTimer = 4.2;
+      }
       return this.getState();
     }
 
@@ -509,6 +533,7 @@ export class GameEngine {
   }
 
   public startGame(): GameState {
+    const wasNonPlaying = this.state.status !== 'playing' && this.state.status !== 'paused';
     if (
       this.state.status === 'title' ||
       this.state.status === 'paused' ||
@@ -516,6 +541,11 @@ export class GameEngine {
       this.state.status === 'briefing'
     ) {
       this.state.status = 'playing';
+      if (wasNonPlaying && this.storyModeEnabled) {
+        this.state.queenCalloutText =
+          this.state.story.queenCastleCallout ?? '"Adrian! Over here—strike down the guards!"';
+        this.state.queenCalloutTimer = 4.2;
+      }
     }
     return this.getState();
   }
@@ -540,43 +570,87 @@ export class GameEngine {
   }
 
   // ==========================================================================
-  // 3. 2D ALL-DIRECTION MOVEMENT & HYBRID 8-WAY / 360° AIMING
+  // 3. 8-WAY FREE-ROAM MOVEMENT + CLEAN 4-WAY CARDINAL AIMING (UP/DOWN/LEFT/RIGHT)
   // ==========================================================================
 
-  public setMoveInput(dx: number, dy: number): void {
+  public static cardinalToAngle(dir: CardinalDirection): number {
+    switch (dir) {
+      case 'up':
+        return -Math.PI / 2;
+      case 'down':
+        return Math.PI / 2;
+      case 'left':
+        return Math.PI;
+      case 'right':
+        return 0;
+    }
+  }
+
+  public static snapToCardinal(
+    dx: number,
+    dy: number,
+    fallback: CardinalDirection = 'up'
+  ): CardinalDirection {
+    if (dx === 0 && dy === 0) return fallback;
+    if (Math.abs(dy) >= Math.abs(dx)) {
+      return dy < 0 ? 'up' : 'down';
+    }
+    return dx < 0 ? 'left' : 'right';
+  }
+
+  public static currentCardinalFromFacing(dir: FacingDirection): CardinalDirection {
+    if (dir === 'up' || dir === 'down' || dir === 'left' || dir === 'right') {
+      return dir;
+    }
+    if (dir === 'up-left' || dir === 'up-right') return 'up';
+    return 'down';
+  }
+
+  public setCardinalAim(dir: CardinalDirection): void {
+    this.preferredCardinal = dir;
+    this.state.useMouseAim = false;
+    this.state.aimCursorX = null;
+    this.state.aimCursorY = null;
+    this.state.adrianFacingDir = dir;
+    this.state.adrianFacingAngle = GameEngine.cardinalToAngle(dir);
+  }
+
+  public setMoveInput(
+    dx: number,
+    dy: number,
+    preferredCardinal?: CardinalDirection | null
+  ): void {
     this.moveInputX = Math.max(-1, Math.min(1, dx));
     this.moveInputY = Math.max(-1, Math.min(1, dy));
+    if (preferredCardinal) {
+      this.preferredCardinal = preferredCardinal;
+    } else if (this.moveInputX === 0 && this.moveInputY === 0) {
+      this.preferredCardinal = null;
+    }
+
     if (this.moveInputX !== 0 || this.moveInputY !== 0) {
       this.autoStepActive = false;
-      if (!this.state.useMouseAim) {
-        this.setAimDirection(this.moveInputX, this.moveInputY);
-      }
+      const curCard = GameEngine.currentCardinalFromFacing(this.state.adrianFacingDir);
+      const nextCard =
+        preferredCardinal ?? GameEngine.snapToCardinal(this.moveInputX, this.moveInputY, curCard);
+      this.setCardinalAim(nextCard);
     }
   }
 
   public setAimDirection(dx: number, dy: number): void {
     if (dx === 0 && dy === 0) return;
-    this.state.useMouseAim = false;
-    this.state.aimCursorX = null;
-    this.state.aimCursorY = null;
-    const angle = Math.atan2(dy, dx);
-    this.state.adrianFacingAngle = angle;
-    this.state.adrianFacingDir = GameEngine.angleToFacingDir(angle);
+    const curCard = GameEngine.currentCardinalFromFacing(this.state.adrianFacingDir);
+    const nextCard = GameEngine.snapToCardinal(dx, dy, curCard);
+    this.setCardinalAim(nextCard);
   }
 
   public setAimCursor(cursorX: number, cursorY: number): void {
-    const clampedX = Math.max(2, Math.min(LOGICAL_WIDTH - 2, cursorX));
-    const clampedY = Math.max(PLAYFIELD_TOP_Y, Math.min(LOGICAL_HEIGHT - 4, cursorY));
-    this.state.aimCursorX = clampedX;
-    this.state.aimCursorY = clampedY;
-    this.state.useMouseAim = true;
-
-    const dx = clampedX - this.state.adrianX;
-    const dy = clampedY - this.state.adrianY;
+    // 360° mouse aiming removed per v2.1 design; snaps cleanly to nearest 4-way cardinal
+    const dx = cursorX - this.state.adrianX;
+    const dy = cursorY - this.state.adrianY;
     if (Math.hypot(dx, dy) > 2) {
-      const angle = Math.atan2(dy, dx);
-      this.state.adrianFacingAngle = angle;
-      this.state.adrianFacingDir = GameEngine.angleToFacingDir(angle);
+      const curCard = GameEngine.currentCardinalFromFacing(this.state.adrianFacingDir);
+      this.setCardinalAim(GameEngine.snapToCardinal(dx, dy, curCard));
     }
   }
 
@@ -593,10 +667,14 @@ export class GameEngine {
 
   /**
    * Moves Adrian along a 2D input vector (dx, dy) with sliding X/Y obstacle collision
-   * against walls, Blue-Iron Blocks, Rotating Shield hubs, intact Palisades, Crates,
-   * and the locked Top Sanctum Portcullis Gate!
+   * while snapping his bow aim cleanly to the 4 cardinal directions (Up, Down, Left, Right).
    */
-  public moveAdrian(dx: number, dy: number, dtSeconds: number = FIXED_DT): GameState {
+  public moveAdrian(
+    dx: number,
+    dy: number,
+    dtSeconds: number = FIXED_DT,
+    preservePreferredCardinal = false
+  ): GameState {
     if (dx === 0 && dy === 0) {
       this.state.adrianVx = 0;
       this.state.adrianVy = 0;
@@ -614,17 +692,16 @@ export class GameEngine {
     this.state.adrianVy = vy;
     this.state.adrianWalkTick += dtSeconds;
 
-    if (!this.state.useMouseAim) {
-      this.state.adrianFacingAngle = Math.atan2(ny, nx);
-      this.state.adrianFacingDir = GameEngine.angleToFacingDir(this.state.adrianFacingAngle);
-    } else if (this.state.aimCursorX !== null && this.state.aimCursorY !== null) {
-      const cdx = this.state.aimCursorX - this.state.adrianX;
-      const cdy = this.state.aimCursorY - this.state.adrianY;
-      if (Math.hypot(cdx, cdy) > 2) {
-        this.state.adrianFacingAngle = Math.atan2(cdy, cdx);
-        this.state.adrianFacingDir = GameEngine.angleToFacingDir(this.state.adrianFacingAngle);
-      }
-    }
+    const curCard = GameEngine.currentCardinalFromFacing(this.state.adrianFacingDir);
+    const nextCard =
+      preservePreferredCardinal && this.preferredCardinal
+        ? this.preferredCardinal
+        : GameEngine.snapToCardinal(dx, dy, curCard);
+    this.state.useMouseAim = false;
+    this.state.aimCursorX = null;
+    this.state.aimCursorY = null;
+    this.state.adrianFacingDir = nextCard;
+    this.state.adrianFacingAngle = GameEngine.cardinalToAngle(nextCard);
 
     // Sliding collision: resolve X first, then Y independently
     const candidateX = Math.max(14, Math.min(LOGICAL_WIDTH - 14, this.state.adrianX + vx * dtSeconds));
@@ -987,6 +1064,20 @@ export class GameEngine {
       }
     }
 
+    if (this.state.queenCalloutTimer && this.state.queenCalloutTimer > 0) {
+      this.state.queenCalloutTimer = Math.max(0, this.state.queenCalloutTimer - dt);
+      if (this.state.queenCalloutTimer === 0) {
+        this.state.queenCalloutText = null;
+      }
+    }
+
+    if (this.state.sanctum.unlocked) {
+      const prevProg = this.state.sanctum.portcullisProgress ?? 0;
+      if (prevProg < 1) {
+        this.state.sanctum.portcullisProgress = Math.min(1, prevProg + dt * 1.9);
+      }
+    }
+
     if (this.state.heartFlashTimer > 0) {
       this.state.heartFlashTimer = Math.max(0, this.state.heartFlashTimer - dt);
     }
@@ -1046,7 +1137,7 @@ export class GameEngine {
     }
 
     if (this.moveInputX !== 0 || this.moveInputY !== 0) {
-      this.moveAdrian(this.moveInputX, this.moveInputY, dt);
+      this.moveAdrian(this.moveInputX, this.moveInputY, dt, true);
     } else {
       this.state.adrianVx = 0;
       this.state.adrianVy = 0;
@@ -1800,6 +1891,8 @@ export class GameEngine {
       this.state.queenMoodTimer = 0;
       this.state.statusBanner = 'Town Breached — Restarting Stage';
       this.state.bannerTimer = 1.5;
+      this.state.queenCalloutText = '"No—Adrian! Stand again, my champion!"';
+      this.state.queenCalloutTimer = 1.5;
       this.state.breachResetTimer = 1.5;
       this.sound?.playTownBreached();
     } else if (this.state.hearts === 1) {
@@ -1807,11 +1900,19 @@ export class GameEngine {
       this.state.queenMoodTimer = 0;
       this.state.statusBanner = bannerMap[reason];
       this.state.bannerTimer = 1.1;
+      this.state.queenCalloutText =
+        '"Gods preserve you, Adrian—only one heart left! Hold to cover!"';
+      this.state.queenCalloutTimer = 3.2;
     } else {
       this.state.queenMood = 'distressed';
       this.state.queenMoodTimer = 1.2;
       this.state.statusBanner = bannerMap[reason];
       this.state.bannerTimer = 1.1;
+      this.state.queenCalloutText =
+        reason === 'iron_block_deflection'
+          ? '"Beware the enchanted Blue-Iron—it hurls your own shaft back!"'
+          : '"Adrian, careful! Keep the stone pillars between you and their fire!"';
+      this.state.queenCalloutTimer = 2.6;
     }
   }
 
@@ -1829,6 +1930,7 @@ export class GameEngine {
 
     if (remainingAll.length === 0) {
       this.state.sanctum.unlocked = true;
+      this.state.sanctum.portcullisProgress = this.state.sanctum.portcullisProgress ?? 0.05;
       this.state.enemyProjectiles = [];
 
       if (this.storyModeEnabled && !allowInstantClearFallback) {
@@ -1836,10 +1938,15 @@ export class GameEngine {
         this.sound?.playSanctumUnlock();
         this.state.queenMood = 'cheering';
         this.state.queenMoodTimer = 0;
-        this.state.statusBanner = 'GATE OPEN! WALK UP TO THE QUEEN!';
-        this.state.bannerTimer = 2.5;
+        this.state.statusBanner = 'SANCTUM SEAL BROKEN! ASCEND TO QUEEN AURELIA!';
+        this.state.bannerTimer = 2.8;
+        this.state.queenCalloutText =
+          '"The blood-seal shatters—the grate rises! Come to me up the crimson carpet, Adrian!"';
+        this.state.queenCalloutTimer = 5.5;
+        this.spawnParticles(120, 52, 'spark', 8, '#fde047');
         this.checkSanctumRescue();
       } else {
+        this.state.sanctum.portcullisProgress = 1;
         this.state.sanctum.rescued = true;
         this.triggerStageClear();
       }
@@ -2103,11 +2210,15 @@ export class GameEngine {
     }
     this.state.remainingRaiders = 0;
     this.state.sanctum.unlocked = true;
+    this.state.sanctum.portcullisProgress = 1;
     this.state.enemyProjectiles = [];
     this.sound?.playSanctumUnlock();
     this.state.queenMood = 'cheering';
-    this.state.statusBanner = 'GATE OPEN! WALK UP TO THE QUEEN!';
-    this.state.bannerTimer = 2.5;
+    this.state.statusBanner = 'SANCTUM SEAL BROKEN! ASCEND TO QUEEN AURELIA!';
+    this.state.bannerTimer = 2.8;
+    this.state.queenCalloutText =
+      '"The blood-seal shatters—the grate rises! Come to me up the crimson carpet, Adrian!"';
+    this.state.queenCalloutTimer = 5.5;
     return this.getState();
   }
 

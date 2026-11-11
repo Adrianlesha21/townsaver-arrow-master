@@ -540,62 +540,29 @@ html, body {
   100% { opacity: 1; }
 }
 
-/* Recessed CRT Screen Housing */
+/* Recessed HD Castle Display Housing (Zero Darkening Vignette or Scanlines) */
 .crt-screen-housing {
   position: relative;
   width: var(--canvas-width);
   height: var(--canvas-height);
-  background: #14161b;
-  border-radius: 4px;
+  background: #141926;
+  border-radius: 5px;
   overflow: hidden;
-  box-shadow: 
-    inset 0 0 30px rgba(0, 0, 0, 0.95),
-    0 0 12px rgba(58, 142, 230, 0.15);
-  border: 2px solid #252834;
+  box-shadow:
+    0 0 18px rgba(250, 204, 21, 0.16),
+    0 0 8px rgba(56, 189, 248, 0.18);
+  border: 2px solid #3b4256;
   margin: 5px 0;
   flex-shrink: 0;
 }
 
-/* Crisp Pixelated Game Canvas */
+/* Crisp 4x Native HiDPI (960x1280) Game Canvas */
 #game-canvas {
   width: var(--canvas-width);
   height: var(--canvas-height);
   display: block;
-  image-rendering: -moz-crisp-edges;
-  image-rendering: -webkit-crisp-edges;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  background-color: #1a1c22;
-}
-
-/* CRT Scanlines Overlay */
-.crt-scanline-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  background: linear-gradient(
-    rgba(18, 16, 16, 0) 50%,
-    rgba(0, 0, 0, 0.25) 50%
-  );
-  background-size: 100% 4px;
-  z-index: 5;
-  opacity: 0.55;
-}
-
-/* CRT Glass Vignette & Curved Bezel Reflection */
-.crt-vignette {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  box-shadow: inset 0 0 45px rgba(0, 0, 0, 0.75);
-  border-radius: 4px;
-  z-index: 6;
+  background-color: #161d2c;
+  cursor: default;
 }
 
 /* Bottom Monitor Trim */
@@ -628,9 +595,9 @@ html, body {
 }
 
 .crt-mon-status {
-  font-size: 6.5px;
+  font-size: 7px;
   letter-spacing: 1px;
-  color: var(--text-muted);
+  color: var(--text-silver);
 }
 
 /* --------------------------------------------------------------------------
@@ -639,34 +606,31 @@ html, body {
 .queen-status-card {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: #1a1c22;
+  gap: 9px;
+  background: #1a1d28;
   border: 1px solid var(--panel-border);
-  border-radius: 3px;
-  padding: 5px;
+  border-radius: 4px;
+  padding: 6px;
   margin-bottom: 6px;
 }
 
 .queen-portrait-wrapper {
-  width: 36px;
-  height: 48px;
-  background: #121318;
+  width: 44px;
+  height: 58px;
+  background: #161224;
   border: 1.5px solid var(--accent-gold);
-  border-radius: 2px;
+  border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 8px var(--accent-gold-glow);
+  box-shadow: 0 0 10px var(--accent-gold-glow);
   overflow: hidden;
   flex-shrink: 0;
 }
 
 .queen-portrait-canvas {
-  width: 36px;
-  height: 48px;
-  image-rendering: -moz-crisp-edges;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+  width: 44px;
+  height: 58px;
   display: block;
 }
 
@@ -675,9 +639,9 @@ html, body {
 }
 
 .queen-mood-title {
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: bold;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.4px;
   color: var(--accent-gold);
   text-shadow: 0 0 6px var(--accent-gold-glow);
   margin-bottom: 2px;
@@ -685,35 +649,37 @@ html, body {
 
 /* Queen Mood Color Variations */
 .queen-mood-title.watching   { color: var(--accent-gold); }
-.queen-mood-title.cheering   { color: var(--accent-green); text-shadow: 0 0 6px rgba(76, 175, 80, 0.6); }
-.queen-mood-title.praying    { color: #ffaa00; text-shadow: 0 0 6px rgba(255, 170, 0, 0.6); }
-.queen-mood-title.distressed { color: var(--accent-crimson); text-shadow: 0 0 8px var(--accent-crimson-glow); }
+.queen-mood-title.cheering   { color: #4ade80; text-shadow: 0 0 6px rgba(74, 222, 128, 0.6); }
+.queen-mood-title.praying    { color: #fb923c; text-shadow: 0 0 6px rgba(251, 146, 60, 0.6); }
+.queen-mood-title.distressed { color: #fb7185; text-shadow: 0 0 8px var(--accent-crimson-glow); }
 
 .queen-mood-desc {
-  font-size: 6px;
-  color: var(--text-silver);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 9.5px;
+  font-weight: 500;
+  color: #e2e8f0;
   line-height: 1.3;
 }
 
 /* Sanctuary Hearts */
 .sanctuary-hearts-block {
-  background: #1a1c22;
+  background: #1a1c24;
   border: 1px solid var(--panel-border);
   border-radius: 3px;
-  padding: 5px;
+  padding: 5px 6px;
 }
 
 .block-label {
   display: flex;
   justify-content: space-between;
-  font-size: 6px;
-  color: var(--text-muted);
-  letter-spacing: 1px;
+  font-size: 7px;
+  color: var(--text-silver);
+  letter-spacing: 0.8px;
   margin-bottom: 3px;
 }
 
 .hearts-count {
-  color: var(--accent-crimson);
+  color: #fb7185;
   font-weight: bold;
 }
 
@@ -724,7 +690,7 @@ html, body {
 }
 
 .heart-icon {
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1;
   transition: transform 0.2s;
 }
@@ -748,7 +714,7 @@ html, body {
 }
 
 .score-box {
-  background: #181920;
+  background: #181a22;
   border: 1px solid var(--panel-border);
   border-radius: 3px;
   padding: 5px;
@@ -756,14 +722,14 @@ html, body {
 }
 
 .score-label {
-  font-size: 6px;
-  color: var(--text-muted);
-  letter-spacing: 1px;
+  font-size: 6.8px;
+  color: var(--text-silver);
+  letter-spacing: 0.8px;
   margin-bottom: 2px;
 }
 
 .score-digits {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--accent-cyan-light);
   letter-spacing: 1.5px;
   font-weight: bold;
@@ -776,7 +742,7 @@ html, body {
 
 /* Stage Selector */
 .stage-info-banner {
-  background: #1a1c22;
+  background: #1a1c24;
   border: 1px solid var(--panel-border);
   border-left: 3px solid var(--accent-gold);
   border-radius: 2px;
@@ -785,13 +751,13 @@ html, body {
 }
 
 .stage-banner-num {
-  font-size: 6.5px;
+  font-size: 7px;
   color: var(--accent-gold);
   margin-bottom: 2px;
 }
 
 .stage-banner-name {
-  font-size: 8px;
+  font-size: 8.5px;
   color: var(--text-white);
   letter-spacing: 0.5px;
 }
@@ -802,20 +768,21 @@ html, body {
 
 .selector-label {
   display: block;
-  font-size: 6px;
-  color: var(--text-muted);
+  font-size: 7px;
+  color: var(--text-silver);
   margin-bottom: 2px;
 }
 
 .stage-select-dropdown {
   width: 100%;
-  background: #181a20;
+  background: #181a22;
   border: 1px solid var(--panel-border);
   border-radius: 3px;
   color: var(--accent-cyan-light);
-  font-family: inherit;
-  font-size: 7px;
-  padding: 4px;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 9.5px;
+  padding: 4px 6px;
   cursor: pointer;
   outline: none;
 }
@@ -832,19 +799,20 @@ html, body {
 }
 
 .stage-nav-btn {
-  background: #232630;
+  background: #232734;
   border: 1px solid var(--panel-border);
-  border-radius: 2px;
-  color: var(--text-silver);
-  font-family: inherit;
-  font-size: 6.5px;
+  border-radius: 3px;
+  color: #e2e8f0;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 9px;
   padding: 4px;
   cursor: pointer;
   transition: all 0.1s;
 }
 
 .stage-nav-btn:hover {
-  background: #2d313e;
+  background: #2d3344;
   color: var(--accent-gold);
   border-color: var(--accent-gold);
 }
@@ -857,42 +825,50 @@ html, body {
 }
 
 .story-act-badge {
-  font-size: 6px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 8.5px;
+  font-weight: 700;
   color: var(--accent-cyan-light);
-  letter-spacing: 0.8px;
+  letter-spacing: 0.6px;
 }
 
 .story-chapter-title {
-  font-size: 7.5px;
+  font-size: 8.5px;
   color: var(--accent-gold);
   font-weight: bold;
 }
 
 .story-objective-pill {
-  font-size: 6.5px;
-  padding: 3px 5px;
-  border-radius: 2px;
-  background: #172334;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 3px;
+  background: #17253a;
   border: 1px solid var(--accent-cyan);
   color: #f8fafc;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
 }
 
 .story-objective-pill.unlocked {
-  background: #143022;
+  background: #143322;
   border-color: #4ade80;
-  color: #86efac;
+  color: #bbf7d0;
   box-shadow: 0 0 8px rgba(74, 222, 128, 0.35);
 }
 
 .story-lore-text {
-  font-size: 6px;
-  color: var(--text-silver);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 10px;
+  color: #fef3c7;
   line-height: 1.35;
-  background: #161820;
-  border: 1px solid var(--panel-border);
-  border-radius: 2px;
-  padding: 4px 5px;
+  background: #1c1829;
+  border: 1px solid #4c3b63;
+  border-radius: 3px;
+  padding: 5px 6px;
+  max-height: 76px;
+  overflow-y: auto;
 }
 
 .story-btn-row {
@@ -900,10 +876,6 @@ html, body {
   grid-template-columns: 1fr 1fr;
   gap: 5px;
   margin-top: 2px;
-}
-
-#game-canvas {
-  cursor: crosshair;
 }
 
 /* Hazards Panel */

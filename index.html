@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Townsaver — The Arrow Master (v2.0 Story &amp; Castle Assault Edition)</title>
+  <title>Townsaver — The Arrow Master (v2.1 HD Torchlit Castle Edition)</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='2' fill='%230c1220'/%3E%3Cpath d='M8 2l4 5H9v7H7V7H4z' fill='%23facc15'/%3E%3C/svg%3E" />
   <link rel="stylesheet" href="/src/style.css" />
 </head>
@@ -16,11 +16,11 @@
         <h1 class="marquee-title">
           <span class="title-town">TOWN</span><span class="title-saver">SAVER</span>
         </h1>
-        <div class="marquee-subtitle">THE ARROW MASTER • 2D CASTLE ASSAULT &amp; QUEEN RESCUE</div>
+        <div class="marquee-subtitle">THE ARROW MASTER • HD TORCHLIT CASTLE &amp; QUEEN RESCUE</div>
       </div>
       <div class="marquee-decor-right">
-        <button class="marquee-download-btn" id="btn-download-html" title="Download standalone Townsaver v2.0 HTML file to your Chrome Downloads folder">
-          ⬇ DOWNLOAD v2.0 (.HTML)
+        <button class="marquee-download-btn" id="btn-download-html" title="Download standalone Townsaver v2.1 HD HTML file to your Chrome Downloads folder">
+          ⬇ DOWNLOAD v2.1 (.HTML)
         </button>
       </div>
     </header>
@@ -48,7 +48,7 @@
               <div class="weapon-info">
                 <div class="weapon-name">SINGLE ARROW</div>
                 <div class="weapon-tag">STANDARD • 1 DMG</div>
-                <div class="weapon-desc">Fast 8-way / 360° shot, infinite quiver.</div>
+                <div class="weapon-desc">Fast 4-way cardinal shot, infinite quiver.</div>
               </div>
               <div class="weapon-ammo unlimited" id="ammo-single">∞</div>
             </button>
@@ -84,10 +84,10 @@
           </div>
         </section>
 
-        <!-- Section: 2D Free-Roam & Aiming Controls Manual -->
+        <!-- Section: Pure Keyboard Movement & 4-Way Cardinal Aim Controls -->
         <section class="bezel-card controls-panel" id="controls-panel">
           <div class="card-header">
-            <span class="header-icon">🎮</span>
+            <span class="header-icon">🏹</span>
             <h2 class="card-title">ARROW MASTER CONTROLS</h2>
           </div>
           <div class="controls-list">
@@ -99,23 +99,15 @@
                 <span class="key-pill">D</span>
                 <span class="key-pill">ARROWS</span>
               </div>
-              <div class="control-action">MOVE 8-WAY</div>
-            </div>
-            <div class="control-row">
-              <div class="control-keys">
-                <span class="key-pill">MOUSE</span>
-                <span class="key-pill">CLICK</span>
-              </div>
-              <div class="control-action">360° AIM &amp; FIRE</div>
+              <div class="control-action">MOVE &amp; AIM (▲▼◀▶)</div>
             </div>
             <div class="control-row">
               <div class="control-keys">
                 <span class="key-pill">SPACE</span>
-                <span class="key-pill">5</span>
-                <span class="key-pill">E</span>
                 <span class="key-pill">ENTER</span>
+                <span class="key-pill">F</span>
               </div>
-              <div class="control-action">SHOOT FACING</div>
+              <div class="control-action">FIRE FACING WAY</div>
             </div>
             <div class="control-row">
               <div class="control-keys">
@@ -133,7 +125,7 @@
                 <span class="key-pill">R</span>
                 <span class="key-pill">M</span>
               </div>
-              <div class="control-action">STORY/PAUSE/RST</div>
+              <div class="control-action">SCROLL/PAUSE/RST</div>
             </div>
           </div>
         </section>
@@ -141,7 +133,7 @@
         <!-- Big Retro Arcade Fire Pushbutton -->
         <button class="arcade-fire-button" id="btn-fire" title="Fire Arrow / Advance Story [SPACE]">
           <span class="fire-btn-glow"></span>
-          <span class="fire-btn-label">🔴 FIRE / ADVANCE [SPACE]</span>
+          <span class="fire-btn-label">🏹 FIRE BOW / ADVANCE [SPACE]</span>
         </button>
 
         <!-- Cabinet Action Buttons -->
@@ -158,18 +150,16 @@
         </div>
       </aside>
 
-      <!-- CENTER FRAME: CRT Monitor Bezel & 240x320 Canvas -->
+      <!-- CENTER FRAME: HD Torchlit Castle Display (960x1280 HiDPI Canvas) -->
       <section class="center-frame-container" id="center-frame-container">
         <div class="crt-monitor-casing">
           <div class="crt-brand-strip">
-            <span class="crt-brand-text">ARROW MASTER CRT • 240×320 NATIVE</span>
+            <span class="crt-brand-text">ARROW MASTER HD • 960×1280 TORCHLIT DISPLAY</span>
             <div class="crt-led-power" id="crt-power-led" title="Power Indicator"></div>
           </div>
 
           <div class="crt-screen-housing" id="crt-screen-housing">
-            <div class="crt-scanline-overlay"></div>
-            <div class="crt-vignette"></div>
-            <canvas id="game-canvas" width="240" height="320" aria-label="Townsaver Game Playfield"></canvas>
+            <canvas id="game-canvas" width="960" height="1280" aria-label="Townsaver Game Playfield"></canvas>
           </div>
 
           <div class="crt-bottom-trim">
@@ -177,7 +167,7 @@
             <div class="crt-vent-slots">
               <span></span><span></span><span></span><span></span><span></span>
             </div>
-            <div class="crt-mon-status" id="crt-fps-counter">60 FPS DETERMINISTIC</div>
+            <div class="crt-mon-status" id="crt-fps-counter">60 FPS HD ENGINE</div>
             <div class="crt-screw screw-right"></div>
           </div>
         </div>
@@ -198,11 +188,11 @@
           </div>
           <div class="queen-status-card">
             <div class="queen-portrait-wrapper" id="queen-portrait-wrapper">
-              <canvas id="queen-portrait-canvas" class="queen-portrait-canvas" width="36" height="48"></canvas>
+              <canvas id="queen-portrait-canvas" class="queen-portrait-canvas" width="144" height="192"></canvas>
             </div>
             <div class="queen-mood-meta">
               <div class="queen-mood-title" id="queen-mood-title">WATCHING</div>
-              <div class="queen-mood-desc" id="queen-mood-desc">Awaits Adrian at the Top Royal Sanctum!</div>
+              <div class="queen-mood-desc" id="queen-mood-desc">Calls out to Adrian from the Royal Sanctum!</div>
             </div>
           </div>
 
@@ -225,17 +215,17 @@
         <section class="bezel-card story-panel" id="story-panel">
           <div class="card-header">
             <span class="header-icon">📖</span>
-            <h2 class="card-title">STORY MISSION</h2>
+            <h2 class="card-title">ROYAL CHRONICLE</h2>
           </div>
           <div class="story-act-badge" id="story-act-badge">ACT I • THE OUTER BAILEY</div>
           <div class="story-chapter-title" id="story-chapter-title">CH.1 — MEADOW GATEWAY</div>
           <div class="story-objective-pill" id="story-objective-pill">⚔ DEFEAT RAIDERS TO UNLOCK SANCTUM</div>
           <div class="story-lore-text" id="story-lore-text">
-            Defeat all Ironfang guards in the maze to unlock the Top Sanctum Portcullis, then walk up to rescue Queen Aurelia!
+            Defeat all Ironfang guards in the maze to raise the Top Sanctum Portcullis, then walk up to rescue Queen Aurelia!
           </div>
           <div class="story-btn-row">
             <button class="stage-nav-btn" id="btn-prologue" title="Watch Opening Story Prologue">📖 PROLOGUE</button>
-            <button class="stage-nav-btn" id="btn-briefing" title="Open Stage Mission Briefing [B]">📜 BRIEFING (B)</button>
+            <button class="stage-nav-btn" id="btn-briefing" title="Open Royal Scroll Briefing [B]">📜 SCROLL (B)</button>
           </div>
         </section>
 
@@ -301,14 +291,14 @@
     <!-- Bottom Arcade Cabinet Footer -->
     <footer class="cabinet-footer">
       <div class="footer-coin-slot">
-        <span class="coin-insert-glow">● STORY CAMPAIGN ●</span>
+        <span class="coin-insert-glow">● ROYAL CAMPAIGN ●</span>
         <span class="coin-sub">15 CASTLE SECTORS + ENDLESS</span>
       </div>
       <div class="footer-status-msg" id="footer-status-msg">
-        MOVE: [WASD/ARROWS] • AIM &amp; SHOOT: [MOUSE CLICK / SPACE] • RESCUE QUEEN AT TOP!
+        MOVE &amp; AIM: [WASD / ARROWS] • FIRE: [SPACE / ENTER / F] • RESCUE QUEEN AT TOP!
       </div>
       <div class="footer-credits">
-        TOWNSAVER v2.0 • ARROW MASTER EDITION
+        TOWNSAVER v2.1 HD • ARROW MASTER EDITION
       </div>
     </footer>
   </div>

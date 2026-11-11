@@ -1,28 +1,26 @@
-# 🏹 Townsaver v2.0 — The Arrow Master
+# 🏹 Townsaver v2.1 HD — The Arrow Master
 
 **Play Live in Chrome (GitHub Pages):**  
 👉 **[https://adrianlesha21.github.io/townsaver-arrow-master/](https://adrianlesha21.github.io/townsaver-arrow-master/)**
 
 **1-Click Standalone Offline `.html` Download:**  
-👉 **[Download `townsaver_v2_arrow_master.html` (Click ⬇ DOWNLOAD v2.0 (.HTML) in the top-right header or Save Page As)](https://adrianlesha21.github.io/townsaver-arrow-master/townsaver_v2_arrow_master.html)**
+👉 **[Download `townsaver_v2_arrow_master.html` (Click `⬇ DOWNLOAD v2.1 (.HTML)` in the top-right header)](https://adrianlesha21.github.io/townsaver-arrow-master/townsaver_v2_arrow_master.html)**
 
 ---
 
-## Game Overview
-**Townsaver v2.0 — The Arrow Master** is a 2D retro tactical maze-arcade game inspired by classic *Arrow Master* arcade challenges:
-- **Full 8-Directional 2D Maze Movement**: Navigate freely across stone corridors, twin channels, iron gates, and castle courtyards with smooth corner-sliding collision.
-- **5 Story Campaign Acts + Queen Rescue**: Fight through 5 distinct tactical arenas (*Outer Palisade*, *Crossfire Courtyard*, *Twin Channels*, *Iron Sanctum*, and *Royal Keep*), unlock the Sanctum seal at the top of each stage, and rescue the captive Queen to reclaim the kingdom.
-- **5 Unlockable Weapons**: Longbow (`1`), Twin-Shot (`2`), Piercing Bolt (`3`), Ricochet Arrow (`4`), and Flame Volley (`5`).
-- **Tactical Enemy Archetypes**: Shield Bearers (front-deflecting armor requiring flanking shots), Rogue Archers, Siege Brutes, Swift Raiders, and the Dark Warlord boss.
+## v2.1 HD Highlights
+- **4× Native HiDPI (`960×1280`) Rich Torchlit Castle**: Zero blurry upscaling and zero CRT scanline/vignette darkening. Sculpted stone flagstones, radial golden torchlight pools, and razor-sharp HD typography.
+- **Pure Keyboard Movement-Coupled 4-Way Cardinal Aiming (`▲ ▼ ◀ ▶`)**: Move smoothly in 8 directions around castle blocks with `WASD` or `Arrow Keys` while your bow automatically faces your cardinal movement direction (`Up`, `Down`, `Left`, `Right`)—press `Space` / `Enter` / `F` to loose arrows straight ahead with zero mouse-aim friction!
+- **Vibrant HD Characters**: Full 4-pose HD directional sprites for Adrian (The Arrow Master), luminous HD Queen Aurelia, Torch & Dagger Goblin Raiders with warm torchlight halos and horned armor, and Neon-Amethyst Bats.
+- **Authentic Medieval Royal Story & Live Castle Speech Bubbles**: 15 handcrafted Castle Eldoria story chapters + Endless Royal Defence, illuminated vellum story scrolls with Queen Aurelia's portrait medallion, live parchment speech bubbles as you enter each castle ward, and an animated rising Iron Portcullis with golden sanctuary rays.
 
 ## Controls
-| Action | Keys / Mouse |
+| Action | Keys |
 | :--- | :--- |
-| **Move (8-Way 2D)** | `WASD` or `Arrow Keys` |
-| **Aim & Shoot** | `Mouse Aim + Left Click` or `Space` / `Z` |
-| **Switch Weapon** | `1`–`5` or `Q` / `E` |
-| **Mute / Unmute Audio** | `M` |
-| **Restart Stage** | `R` |
+| **Move & Aim (`▲ ▼ ◀ ▶`)** | `WASD` or `Arrow Keys` |
+| **Fire Bow (Facing Direction)** | `Space`, `Enter`, or `F` |
+| **Select Weapon** | `1` (Single ∞), `2` (Double Shot), `3` (Great Arrow), `Tab` / `Q` |
+| **Story Scroll / Pause / Restart / Mute** | `B` / `P` / `R` / `M` |
 
 ## Local Development
 ```bash

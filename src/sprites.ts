@@ -403,6 +403,394 @@ function getHorizontallyFlippedMatrix(key: string, matrix: readonly string[]): r
   return flipped;
 }
 
+function isHDCanvas(ctx: CanvasRenderingContext2D): boolean {
+  return (
+    typeof ctx.createRadialGradient === 'function' &&
+    typeof ctx.createLinearGradient === 'function' &&
+    typeof ctx.roundRect === 'function' &&
+    typeof ctx.ellipse === 'function'
+  );
+}
+
+function drawHDAdrian(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  resolved: AdrianFrameName,
+  flash: MuzzleFlashType,
+  options?: AdrianRenderOptions
+): void {
+  const aimAngle = options?.aimAngle ?? -Math.PI / 2;
+  const cosA = Math.cos(aimAngle);
+  const sinA = Math.sin(aimAngle);
+  const isMoving = Boolean(options?.isMoving);
+  const walkPhase = isMoving && options?.walkTick !== undefined ? options.walkTick * 12 : 0;
+  const bob = isMoving ? Math.sin(walkPhase) * 1.1 : 0;
+  const stride = isMoving ? Math.sin(walkPhase) * 2.4 : 0;
+  const invulnFlash = Boolean(
+    options?.invulnerable && Math.floor((options.walkTick ?? 0) * 20) % 2 === 1
+  );
+
+  // Determine strict 4-way cardinal pose: 'up' | 'down' | 'left' | 'right'
+  let dir: 'up' | 'down' | 'left' | 'right' = 'up';
+  if (Math.abs(sinA) >= Math.abs(cosA)) {
+    dir = sinA < 0 ? 'up' : 'down';
+  } else {
+    dir = cosA < 0 ? 'left' : 'right';
+  }
+
+  ctx.save();
+  ctx.translate(x, y + bob);
+
+  // 1. Heroic cyan-gold ground visibility aura + soft contact shadow
+  const halo = ctx.createRadialGradient(0, 3, 1, 0, 3, 16);
+  halo.addColorStop(0, 'rgba(56, 189, 248, 0.32)');
+  halo.addColorStop(0.6, 'rgba(250, 204, 21, 0.12)');
+  halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(0, 3, 16, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(5, 8, 15, 0.58)';
+  ctx.beginPath();
+  ctx.ellipse(0, 11.5 - bob * 0.5, 8.5, 3.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (invulnFlash) {
+    ctx.globalAlpha = 0.6;
+  }
+
+  // Boots (animated 2D stride)
+  ctx.fillStyle = '#451a03';
+  ctx.strokeStyle = '#090d16';
+  ctx.lineWidth = 1.1;
+  const leftFootY = 8.5 + stride * 0.6;
+  const rightFootY = 8.5 - stride * 0.6;
+  ctx.beginPath();
+  ctx.roundRect(-5.5, leftFootY, 4.2, 3.8, 1.2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.roundRect(1.3, rightFootY, 4.2, 3.8, 1.2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Trousers
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(-4.5, 4.5, 3.2, 4.5);
+  ctx.fillRect(1.3, 4.5, 3.2, 4.5);
+
+  if (dir === 'up') {
+    // --- UP POSE: Gilded Recurve Bow raised ahead + Flowing Royal Blue Cloak from behind ---
+    // Overhead Recurve Bow & Glowing Nocked Arrow
+    ctx.save();
+    ctx.translate(0, -10.5);
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(-8.5, 2.5);
+    ctx.lineTo(0, 5.5);
+    ctx.lineTo(8.5, 2.5);
+    ctx.stroke();
+
+    const bowGrad = ctx.createLinearGradient(-9, 0, 9, 0);
+    bowGrad.addColorStop(0, '#b45309');
+    bowGrad.addColorStop(0.5, '#facc15');
+    bowGrad.addColorStop(1, '#b45309');
+    ctx.strokeStyle = bowGrad;
+    ctx.lineWidth = 2.1;
+    ctx.beginPath();
+    ctx.arc(0, 5, 9, Math.PI * 1.15, Math.PI * 1.85);
+    ctx.stroke();
+
+    // Glowing Arrow Shaft pointing UP
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(0, 5);
+    ctx.lineTo(0, -7.5);
+    ctx.stroke();
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.moveTo(0, -10.5);
+    ctx.lineTo(-2.4, -6.5);
+    ctx.lineTo(2.4, -6.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // Quiver with white fletchings slung across right shoulder
+    ctx.fillStyle = '#78350f';
+    ctx.strokeStyle = '#090d16';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(3.5, -8.5, 3.8, 9, 1);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(4.2, -11, 1.2, 2.8);
+    ctx.fillRect(6.0, -10.5, 1.2, 2.5);
+
+    // Flowing Royal Cloak (Back View with Gold Hem & Emblem)
+    const cloakGrad = ctx.createLinearGradient(0, -7, 0, 7.5);
+    cloakGrad.addColorStop(0, '#38bdf8');
+    cloakGrad.addColorStop(0.45, '#2563eb');
+    cloakGrad.addColorStop(1, '#1e3a8a');
+    ctx.fillStyle = cloakGrad;
+    ctx.strokeStyle = '#090d16';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(-6.2, -5.5);
+    ctx.lineTo(6.2, -5.5);
+    ctx.lineTo(7.8 + stride * 0.25, 6.8);
+    ctx.lineTo(-7.8 + stride * 0.25, 6.8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Gold Cloak Trim & Sun Emblem
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(-7.0 + stride * 0.2, 5.2, 14, 1.5);
+    ctx.beginPath();
+    ctx.arc(0, 0.2, 2.1, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Royal Hood (Back) + Crimson Feather Plume
+    const hoodGrad = ctx.createRadialGradient(-1, -9.5, 1, 0, -8.5, 6.5);
+    hoodGrad.addColorStop(0, '#60a5fa');
+    hoodGrad.addColorStop(1, '#1d4ed8');
+    ctx.fillStyle = hoodGrad;
+    ctx.beginPath();
+    ctx.arc(0, -8.2, 5.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Crimson Plume
+    ctx.fillStyle = '#f43f5e';
+    ctx.beginPath();
+    ctx.moveTo(-1.5, -13.2);
+    ctx.quadraticCurveTo(-5.5, -16.5, -3.2, -10.2);
+    ctx.closePath();
+    ctx.fill();
+  } else if (dir === 'down') {
+    // --- DOWN POSE: Expressive Ranger Front View + Bow Drawn Downward ---
+    // Flowing Back Cape
+    ctx.fillStyle = '#1e3a8a';
+    ctx.strokeStyle = '#090d16';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(-6.8, -5);
+    ctx.lineTo(6.8, -5);
+    ctx.lineTo(8.0, 6.5);
+    ctx.lineTo(-8.0, 6.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Royal Azure Tunic + Gold Belt & Baldric
+    const tunicGrad = ctx.createLinearGradient(0, -5, 0, 6);
+    tunicGrad.addColorStop(0, '#38bdf8');
+    tunicGrad.addColorStop(1, '#1d4ed8');
+    ctx.fillStyle = tunicGrad;
+    ctx.beginPath();
+    ctx.roundRect(-5.6, -5.2, 11.2, 11.2, 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(-5.4, 1.4, 10.8, 1.8);
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(-1.5, 1.2, 3, 2.2);
+
+    // Hood & Expressive Face
+    ctx.fillStyle = '#2563eb';
+    ctx.beginPath();
+    ctx.arc(0, -8.5, 5.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Crimson Plume
+    ctx.fillStyle = '#f43f5e';
+    ctx.beginPath();
+    ctx.moveTo(1.5, -13.8);
+    ctx.quadraticCurveTo(6.0, -16.8, 4.2, -10.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // Warm Peach Face & Fierce Eyes
+    ctx.fillStyle = '#fed7aa';
+    ctx.beginPath();
+    ctx.arc(0, -7.6, 3.9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-2.3, -8.4, 1.3, 1.5);
+    ctx.fillRect(1.0, -8.4, 1.3, 1.5);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-2.1, -8.4, 0.6, 0.6);
+    ctx.fillRect(1.2, -8.4, 0.6, 0.6);
+
+    // Gilded Bow Held Forward-Down
+    ctx.save();
+    ctx.translate(0, 7.5);
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 2.1;
+    ctx.beginPath();
+    ctx.arc(0, -3.5, 8.5, Math.PI * 0.15, Math.PI * 0.85);
+    ctx.stroke();
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(0, -3.5);
+    ctx.lineTo(0, 8.5);
+    ctx.stroke();
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.moveTo(0, 11.5);
+    ctx.lineTo(-2.4, 7.5);
+    ctx.lineTo(2.4, 7.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  } else {
+    // --- LEFT / RIGHT PROFILE POSE: Classic Archer Side-Draw Silhouette ---
+    const flip = dir === 'left' ? -1 : 1;
+    ctx.scale(flip, 1);
+
+    // Streaming Back Cloak
+    ctx.fillStyle = '#1e40af';
+    ctx.strokeStyle = '#090d16';
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.moveTo(-2, -5.5);
+    ctx.lineTo(-8.2 - Math.abs(stride) * 0.4, 5.8);
+    ctx.lineTo(-2.5, 6.2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Quiver on Back
+    ctx.fillStyle = '#78350f';
+    ctx.beginPath();
+    ctx.roundRect(-6.8, -8.5, 3.4, 8.2, 1);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-7.5, -10.8, 1.3, 2.6);
+    ctx.fillRect(-5.8, -10.4, 1.3, 2.3);
+
+    // Tunic Body
+    const sideGrad = ctx.createLinearGradient(-4, -5, 5, 6);
+    sideGrad.addColorStop(0, '#38bdf8');
+    sideGrad.addColorStop(1, '#1d4ed8');
+    ctx.fillStyle = sideGrad;
+    ctx.beginPath();
+    ctx.roundRect(-4.6, -5.2, 9.2, 11.0, 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(-4.5, 1.5, 9.0, 1.7);
+    ctx.fillRect(-4.5, 4.5, 9.0, 1.1);
+
+    // Profile Hood, Plume & Face
+    ctx.fillStyle = '#2563eb';
+    ctx.beginPath();
+    ctx.arc(-0.3, -8.5, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#f43f5e';
+    ctx.beginPath();
+    ctx.moveTo(-2.5, -13.2);
+    ctx.quadraticCurveTo(-8.5, -15.8, -5.8, -9.5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#fed7aa';
+    ctx.beginPath();
+    ctx.arc(1.8, -7.8, 3.4, -Math.PI * 0.45, Math.PI * 0.45);
+    ctx.lineTo(0.2, -4.6);
+    ctx.lineTo(0.2, -11.0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(2.3, -8.6, 1.3, 1.5);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(2.6, -8.6, 0.6, 0.6);
+
+    // Side Recurve Bow & Drawn Glowing Arrow
+    const pull = resolved === 'draw' ? -2.5 : -0.8;
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 0.85;
+    ctx.beginPath();
+    ctx.moveTo(6.2, -9.2);
+    ctx.lineTo(1.5 + pull, -1.5);
+    ctx.lineTo(6.2, 6.2);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(3.2, -1.5, 8.5, -Math.PI * 0.4, Math.PI * 0.4);
+    ctx.stroke();
+
+    // Glowing Nocked Arrow pointing RIGHT (mirrored automatically for LEFT)
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(1.5 + pull, -1.5);
+    ctx.lineTo(13.2, -1.5);
+    ctx.stroke();
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.moveTo(16.2, -1.5);
+    ctx.lineTo(12.2, -3.8);
+    ctx.lineTo(12.2, 0.8);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.restore();
+
+  // 2. Crisp Golden 4-Way Cardinal Sightline & Directional Chevron (No Mouse Reticle!)
+  if (options?.showAimReticle) {
+    for (const dist of [18, 25]) {
+      const gx = x + cosA * dist;
+      const gy = y + sinA * dist;
+      ctx.fillStyle = 'rgba(125, 211, 252, 0.85)';
+      ctx.beginPath();
+      ctx.arc(gx, gy, 1.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Bold Golden Cardinal Chevron at dist = 33
+    ctx.save();
+    ctx.translate(x + cosA * 33, y + sinA * 33);
+    ctx.rotate(aimAngle);
+    ctx.fillStyle = '#facc15';
+    ctx.strokeStyle = '#090d16';
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(4.2, 0);
+    ctx.lineTo(-2.5, -3.6);
+    ctx.lineTo(-1.0, 0);
+    ctx.lineTo(-2.5, 3.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 3. Directional Muzzle Flash
+  if (flash && flash !== 'none') {
+    const flashKind: WeaponType =
+      flash === 'single' ? 'single' : flash === 'double' ? 'double' : 'heavy';
+    const fx = Math.round(x + cosA * 15);
+    const fy = Math.round(y + sinA * 15);
+    drawMuzzleFlash(ctx, fx, fy, flashKind, 0.4);
+  }
+}
+
 export function drawAdrian(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -412,6 +800,11 @@ export function drawAdrian(
   options?: AdrianRenderOptions
 ): void {
   const resolved = resolveAdrianFrame(frame);
+  if (isHDCanvas(ctx)) {
+    drawHDAdrian(ctx, x, y, resolved, flash, options);
+    return;
+  }
+
   const aimAngle = options?.aimAngle ?? -Math.PI / 2;
   const cosA = Math.cos(aimAngle);
   const sinA = Math.sin(aimAngle);
@@ -426,16 +819,13 @@ export function drawAdrian(
   const left = Math.round(x - 10);
   const top = Math.round(y - 12 + walkBob);
 
-  // Subtle ground shadow beneath Adrian's boots
   ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
   ctx.fillRect(left + 3, Math.round(y + 11), 14, 2);
 
-  // Invulnerability blink highlight when recovering from damage
   const invulnFlash = Boolean(
     options?.invulnerable && Math.floor((options.walkTick ?? 0) * 20) % 2 === 1
   );
 
-  // Render 20x24 pixel matrix (mirrored horizontally when aiming/moving left)
   const baseMatrix = ADRIAN_FRAMES[resolved];
   const matrix = facingLeft
     ? getHorizontallyFlippedMatrix(`adrian_${resolved}_flip`, baseMatrix)
@@ -443,7 +833,6 @@ export function drawAdrian(
   const cacheKey = facingLeft ? `adrian_${resolved}_flip` : `adrian_${resolved}`;
   blitMatrixSprite(ctx, cacheKey, left, top, matrix, ADRIAN_PALETTE, invulnFlash);
 
-  // Directional Aim Guide Dots & Crosshair Reticle when options.showAimReticle is true
   if (options?.showAimReticle) {
     for (const dist of [15, 23, 31]) {
       const gx = Math.round(x + cosA * dist);
@@ -451,25 +840,8 @@ export function drawAdrian(
       ctx.fillStyle = dist === 31 ? '#facc15' : 'rgba(112, 196, 255, 0.78)';
       ctx.fillRect(gx - 1, gy - 1, 2, 2);
     }
-    if (
-      options.cursorX !== undefined &&
-      options.cursorX !== null &&
-      options.cursorY !== undefined &&
-      options.cursorY !== null
-    ) {
-      const rx = Math.round(options.cursorX);
-      const ry = Math.round(options.cursorY);
-      ctx.fillStyle = '#facc15';
-      ctx.fillRect(rx - 4, ry, 3, 1);
-      ctx.fillRect(rx + 2, ry, 3, 1);
-      ctx.fillRect(rx, ry - 4, 1, 3);
-      ctx.fillRect(rx, ry + 2, 1, 3);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(rx, ry, 1, 1);
-    }
   }
 
-  // Directional bow arrow-tip indicator
   const tipX = Math.round(x + cosA * 12);
   const tipY = Math.round(y + sinA * 12);
   if (resolved === 'nock' || resolved === 'draw' || options?.showAimReticle) {
@@ -479,7 +851,6 @@ export function drawAdrian(
     ctx.fillRect(tipX, tipY, 1, 1);
   }
 
-  // Directional Muzzle flash overlay (Quick Firing, Spread Firing, or Heavy Blast fireball)
   if (flash && flash !== 'none') {
     const flashKind: WeaponType =
       flash === 'single' ? 'single' : flash === 'double' ? 'double' : 'heavy';
@@ -490,142 +861,318 @@ export function drawAdrian(
 }
 
 // ============================================================================
-// 3. THE QUEEN (18x24 Playfield & 36x48 #queen-portrait-canvas)
+// 3. THE QUEEN (HD Royal Sanctuary Figure & 144x192 Portrait + Fallback Matrix)
 // ============================================================================
 
 export const QUEEN_PALETTE: Record<string, string> = {
-  K: '#121318', // Dark 1px outline
-  G: '#fbbf24', // Royal gold crown & gown center sash/hem
-  Y: '#fef08a', // Bright gold crown tip specular
-  A: '#d97706', // Amber-gold crown base & trim shadow
-  R: '#e11d48', // Crown ruby gem & cheerful open smile
-  J: '#38bdf8', // Crown cyan gem & distressed tear drops
-  H: '#78350f', // Chestnut-brown hair midtone
-  N: '#451a03', // Dark brown hair shadow
-  M: '#92400e', // Warm brown hair highlight
-  S: '#fbd38d', // Soft peach royal skin
-  D: '#f5cba7', // Skin contour / neck shadow
-  C: '#f472b6', // Rosy pink cheek blush
-  E: '#1e1b2e', // Dark eye pixels
-  V: '#581c87', // Deep royal purple gown shadow
-  P: '#7e22ce', // Royal purple gown midtone
-  L: '#a855f7', // Bright orchid-violet sleeve & dress highlight
-  W: '#ffffff', // Sparkle / eye catchlight
+  K: '#121318',
+  G: '#fbbf24',
+  Y: '#fef08a',
+  A: '#d97706',
+  R: '#e11d48',
+  J: '#38bdf8',
+  H: '#78350f',
+  N: '#451a03',
+  M: '#92400e',
+  S: '#fbd38d',
+  D: '#f5cba7',
+  C: '#f472b6',
+  E: '#1e1b2e',
+  V: '#581c87',
+  P: '#9333ea',
+  L: '#c084fc',
+  W: '#ffffff',
 };
 
 export const QUEEN_MOOD_FRAMES: Record<QueenMood, readonly string[]> = {
-  // 1. watching: Calm regal idle posture, hands resting gently at sides
   watching: [
-    '....K..K..K..K....', // 00
-    '....KY.KYYK.YK....', // 01
-    '....KGGKGGKGGK....', // 02
-    '....KGRGGGGJGK....', // 03
-    '...KKAAAAAAAAKK...', // 04
-    '..KMHHSSSSSSHHMK..', // 05
-    '..KHHSSSSSSSSHHK..', // 06
-    '..KNHSSESSSESNHK..', // 07
-    '..KNHGCSSSSCGNHK..', // 08
-    '..KNNHSSSSSSHNNK..', // 09
-    '...KKNDDDDDDNKK...', // 10
-    '..KLLPGGGGGGPLLK..', // 11
-    '..KLLPPPPPPPPLLK..', // 12
-    '..KVPKGGGGGGKPVK..', // 13
-    '..KSSKVPGGPVKSSK..', // 14
-    '..KKKKLPGGPLKKKK..', // 15
-    '....KLLPGGPLLK....', // 16
-    '...KLPPAWWAPPLK...', // 17
-    '...KPPPVGGVPPPK...', // 18
-    '..KLPPPVGGVPPPLK..', // 19
-    '..KPPPPVGGVPPPPK..', // 20
-    '..KVVVVAGGAVVVVK..', // 21
-    '..KGGGGGGGGGGGGK..', // 22
-    '..KKKKKKKKKKKKKK..', // 23
+    '....K..K..K..K....',
+    '....KY.KYYK.YK....',
+    '....KGGKGGKGGK....',
+    '....KGRGGGGJGK....',
+    '...KKAAAAAAAAKK...',
+    '..KMHHSSSSSSHHMK..',
+    '..KHHSSSSSSSSHHK..',
+    '..KNHSSESSSESNHK..',
+    '..KNHGCSSSSCGNHK..',
+    '..KNNHSSSSSSHNNK..',
+    '...KKNDDDDDDNKK...',
+    '..KLLPGGGGGGPLLK..',
+    '..KLLPPPPPPPPLLK..',
+    '..KVPKGGGGGGKPVK..',
+    '..KSSKVPGGPVKSSK..',
+    '..KKKKLPGGPLKKKK..',
+    '....KLLPGGPLLK....',
+    '...KLPPAWWAPPLK...',
+    '...KPPPVGGVPPPK...',
+    '..KLPPPVGGVPPPLK..',
+    '..KPPPPVGGVPPPPK..',
+    '..KVVVVAGGAVVVVK..',
+    '..KGGGGGGGGGGGGK..',
+    '..KKKKKKKKKKKKKK..',
   ],
-
-  // 2. cheering: Right arm raised high waving, joyful open smile, crown sparkle
   cheering: [
-    '....K..KWWK..K....', // 00
-    '....KY.KYYK.YK....', // 01
-    '....KGGKGGKGGK....', // 02
-    '....KGRGGGGJGK....', // 03
-    '...KKAAAAAAAAKK...', // 04
-    '..KMHHSSSSSSHHMK..', // 05
-    '..KHHSSSSSSSSHHKSS', // 06
-    '..KNHSSESSSESNHKSS', // 07
-    '..KNHGCSSSSCGNHKK.', // 08
-    '..KNNHSSRRSSHNNLK.', // 09
-    '...KKNDDDDDDNKKLK.', // 10
-    '..KLLPGGGGGGPLLPK.', // 11
-    '..KLLPPPPPPPPLVK..', // 12
-    '..KVPKGGGGGGKKKK..', // 13
-    '..KSSKVPGGPVK.....', // 14
-    '..KKKKLPGGPLK.....', // 15
-    '....KLLPGGPLLK....', // 16
-    '...KLPPAWWAPPLK...', // 17
-    '...KPPPVGGVPPPK...', // 18
-    '..KLPPPVGGVPPPLK..', // 19
-    '..KPPPPVGGVPPPPK..', // 20
-    '..KVVVVAGGAVVVVK..', // 21
-    '..KGGGGGGGGGGGGK..', // 22
-    '..KKKKKKKKKKKKKK..', // 23
+    '....K..KWWK..K....',
+    '....KY.KYYK.YK....',
+    '....KGGKGGKGGK....',
+    '....KGRGGGGJGK....',
+    '...KKAAAAAAAAKK...',
+    '..KMHHSSSSSSHHMK..',
+    '..KHHSSSSSSSSHHKSS',
+    '..KNHSSESSSESNHKSS',
+    '..KNHGCSSSSCGNHKK.',
+    '..KNNHSSRRSSHNNLK.',
+    '...KKNDDDDDDNKKLK.',
+    '..KLLPGGGGGGPLLPK.',
+    '..KLLPPPPPPPPLVK..',
+    '..KVPKGGGGGGKKKK..',
+    '..KSSKVPGGPVK.....',
+    '..KKKKLPGGPLK.....',
+    '....KLLPGGPLLK....',
+    '...KLPPAWWAPPLK...',
+    '...KPPPVGGVPPPK...',
+    '..KLPPPVGGVPPPLK..',
+    '..KPPPPVGGVPPPPK..',
+    '..KVVVVAGGAVVVVK..',
+    '..KGGGGGGGGGGGGK..',
+    '..KKKKKKKKKKKKKK..',
   ],
-
-  // 3. praying: Hands clasped together in prayer at chest/chin (1 Heart left)
   praying: [
-    '....K..K..K..K....', // 00
-    '....KY.KYYK.YK....', // 01
-    '....KGGKGGKGGK....', // 02
-    '....KGRGGGGJGK....', // 03
-    '...KKAAAAAAAAKK...', // 04
-    '..KMHHSSSSSSHHMK..', // 05
-    '..KHHSSSSSSSSHHK..', // 06
-    '..KNHSSESSSESNHK..', // 07
-    '..KNHGCSSSSCGNHK..', // 08
-    '..KNNHSSSSSSHNNK..', // 09
-    '...KKNDDDDDDNKK...', // 10
-    '..KLLPGGGGGGPLLK..', // 11
-    '..KLPPKSSSSKPPLK..', // 12
-    '..KVVPKSSSSKPVVK..', // 13
-    '...KKKKGGGGKKKK...', // 14
-    '....KLLPGGPLLK....', // 15
-    '....KLLPGGPLLK....', // 16
-    '...KLPPAWWAPPLK...', // 17
-    '...KPPPVGGVPPPK...', // 18
-    '..KLPPPVGGVPPPLK..', // 19
-    '..KPPPPVGGVPPPPK..', // 20
-    '..KVVVVAGGAVVVVK..', // 21
-    '..KGGGGGGGGGGGGK..', // 22
-    '..KKKKKKKKKKKKKK..', // 23
+    '....K..K..K..K....',
+    '....KY.KYYK.YK....',
+    '....KGGKGGKGGK....',
+    '....KGRGGGGJGK....',
+    '...KKAAAAAAAAKK...',
+    '..KMHHSSSSSSHHMK..',
+    '..KHHSSSSSSSSHHK..',
+    '..KNHSSESSSESNHK..',
+    '..KNHGCSSSSCGNHK..',
+    '..KNNHSSSSSSHNNK..',
+    '...KKNDDDDDDNKK...',
+    '..KLLPGGGGGGPLLK..',
+    '..KLPPKSSSSKPPLK..',
+    '..KVVPKSSSSKPVVK..',
+    '...KKKKGGGGKKKK...',
+    '....KLLPGGPLLK....',
+    '....KLLPGGPLLK....',
+    '...KLPPAWWAPPLK...',
+    '...KPPPVGGVPPPK...',
+    '..KLPPPVGGVPPPLK..',
+    '..KPPPPVGGVPPPPK..',
+    '..KVVVVAGGAVVVVK..',
+    '..KGGGGGGGGGGGGK..',
+    '..KKKKKKKKKKKKKK..',
   ],
-
-  // 4. distressed: Slightly hunched (crown 1px lower), cyan tears, hands clutching in shock
   distressed: [
-    '..................', // 00
-    '....K..K..K..K....', // 01
-    '....KY.KYYK.YK....', // 02
-    '....KGGKGGKGGK....', // 03
-    '....KGRGGGGJGK....', // 04
-    '...KKAAAAAAAAKK...', // 05
-    '..KMHHSSSSSSHHMK..', // 06
-    '..KHHSSSSSSSSHHK..', // 07
-    '..KNHJSEJSSESJHK..', // 08
-    '..KNHJCSSRRSCJHK..', // 09
-    '..KNNHSSSSSSHNNK..', // 10
-    '...KKNDDDDDDNKK...', // 11
-    '..KLLPGGGGGGPLLK..', // 12
-    '..KLPPKSSSSKPPLK..', // 13
-    '..KVVPKDDDDKPVVK..', // 14
-    '...KKKKGGGGKKKK...', // 15
-    '....KLLPGGPLLK....', // 16
-    '...KLPPAWWAPPLK...', // 17
-    '...KPPPVGGVPPPK...', // 18
-    '...KLPPVGGVPPPLK..', // 19
-    '...KPPPVGGVPPPPK..', // 20
-    '...KVVVAGGAVVVVK..', // 21
-    '...KGGGGGGGGGGGK..', // 22
-    '...KKKKKKKKKKKKK..', // 23
+    '..................',
+    '....K..K..K..K....',
+    '....KY.KYYK.YK....',
+    '....KGGKGGKGGK....',
+    '....KGRGGGGJGK....',
+    '...KKAAAAAAAAKK...',
+    '..KMHHSSSSSSHHMK..',
+    '..KHHSSSSSSSSHHK..',
+    '..KNHJSEJSSESJHK..',
+    '..KNHJCSSRRSCJHK..',
+    '..KNNHSSSSSSHNNK..',
+    '...KKNDDDDDDNKK...',
+    '..KLLPGGGGGGPLLK..',
+    '..KLPPKSSSSKPPLK..',
+    '..KVVPKDDDDKPVVK..',
+    '...KKKKGGGGKKKK...',
+    '....KLLPGGPLLK....',
+    '...KLPPAWWAPPLK...',
+    '...KPPPVGGVPPPK...',
+    '...KLPPVGGVPPPLK..',
+    '...KPPPVGGVPPPPK..',
+    '...KVVVAGGAVVVVK..',
+    '...KGGGGGGGGGGGK..',
+    '...KKKKKKKKKKKKK..',
   ],
 };
+
+function drawHDQueenFigure(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  mood: QueenMood,
+  animTick: number,
+  scale = 1
+): void {
+  const breathe = Math.sin(animTick * 0.08) * 0.6;
+  ctx.save();
+  ctx.translate(x, y + breathe * 0.4);
+  if (scale !== 1) {
+    ctx.scale(scale, scale);
+  }
+
+  // Warm Royal Golden Aura behind Queen Aurelia
+  const aura = ctx.createRadialGradient(0, -1, 1, 0, -1, 16);
+  aura.addColorStop(0, mood === 'distressed' ? 'rgba(244, 63, 94, 0.36)' : 'rgba(250, 204, 21, 0.36)');
+  aura.addColorStop(0.65, 'rgba(192, 132, 252, 0.16)');
+  aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = aura;
+  ctx.beginPath();
+  ctx.arc(0, -1, 16, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cascading Chestnut Hair Back Layer
+  ctx.fillStyle = '#5c2d0c';
+  ctx.strokeStyle = '#090d16';
+  ctx.lineWidth = 1.0;
+  ctx.beginPath();
+  ctx.arc(0, -6.2, 6.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Flowing Velvet Royal Gown (Orchid-Amethyst + Gold Brocade Sash)
+  const gownGrad = ctx.createLinearGradient(0, -3, 0, 12.5);
+  gownGrad.addColorStop(0, '#c084fc');
+  gownGrad.addColorStop(0.45, '#9333ea');
+  gownGrad.addColorStop(1, '#581c87');
+  ctx.fillStyle = gownGrad;
+  ctx.beginPath();
+  ctx.moveTo(-4.8, -2.5);
+  ctx.lineTo(4.8, -2.5);
+  ctx.lineTo(8.5, 12.2);
+  ctx.lineTo(-8.5, 12.2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Gold Center Sash & Royal Hem Embroidery
+  ctx.fillStyle = '#facc15';
+  ctx.fillRect(-1.8, -2.2, 3.6, 14.0);
+  ctx.fillRect(-8.2, 10.6, 16.4, 1.6);
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(0, 1.5, 1.1, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sleeves & Mood-Reactive Hands
+  ctx.fillStyle = '#d8b4fe';
+  if (mood === 'cheering') {
+    const wave = Math.sin(animTick * 0.25) * 1.2;
+    ctx.beginPath();
+    ctx.roundRect(-7.2, -2.2, 3.0, 5.2, 1.2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.roundRect(4.2, -7.8 + wave, 3.0, 5.8, 1.2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#fde68a';
+    ctx.beginPath();
+    ctx.arc(5.7, -8.5 + wave, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (mood === 'praying' || mood === 'distressed') {
+    // Hands clasped at heart
+    ctx.beginPath();
+    ctx.roundRect(-6.4, -2.0, 3.2, 4.8, 1.2);
+    ctx.roundRect(3.2, -2.0, 3.2, 4.8, 1.2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#fed7aa';
+    ctx.beginPath();
+    ctx.arc(0, 0.2, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.roundRect(-6.8, -2.0, 2.8, 5.5, 1.2);
+    ctx.roundRect(4.0, -2.0, 2.8, 5.5, 1.2);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // Lifelike Royal Face & Rosy Cheeks
+  ctx.fillStyle = '#fde68a';
+  ctx.beginPath();
+  ctx.arc(0, -6.8, 4.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Framing Hair Locks
+  ctx.fillStyle = '#92400e';
+  ctx.beginPath();
+  ctx.arc(-3.8, -6.8, 1.7, 0, Math.PI * 2);
+  ctx.arc(3.8, -6.8, 1.7, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Rosy Blush
+  ctx.fillStyle = 'rgba(244, 114, 182, 0.65)';
+  ctx.beginPath();
+  ctx.arc(-2.4, -5.8, 0.9, 0, Math.PI * 2);
+  ctx.arc(2.4, -5.8, 0.9, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Expressive Eyes & Mouth
+  ctx.fillStyle = '#1e1b4b';
+  if (mood === 'praying') {
+    ctx.fillRect(-2.4, -7.2, 1.6, 0.7);
+    ctx.fillRect(0.8, -7.2, 1.6, 0.7);
+  } else {
+    ctx.beginPath();
+    ctx.arc(-1.6, -7.3, 0.85, 0, Math.PI * 2);
+    ctx.arc(1.6, -7.3, 0.85, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-1.9, -7.8, 0.55, 0.55);
+    ctx.fillRect(1.3, -7.8, 0.55, 0.55);
+  }
+
+  if (mood === 'distressed') {
+    // Sparkling Sapphire Tears
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(-2.1, -6.2, 0.8, 1.6);
+    ctx.fillRect(1.4, -6.2, 0.8, 1.6);
+    ctx.fillStyle = '#be123c';
+    ctx.beginPath();
+    ctx.arc(0, -4.5, 1.0, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (mood === 'cheering') {
+    ctx.fillStyle = '#e11d48';
+    ctx.beginPath();
+    ctx.arc(0, -5.1, 1.35, 0, Math.PI);
+    ctx.fill();
+  } else {
+    ctx.strokeStyle = '#be123c';
+    ctx.lineWidth = 0.65;
+    ctx.beginPath();
+    ctx.arc(0, -5.2, 1.0, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.stroke();
+  }
+
+  // Gleaming 3-Spire Royal Gold Crown with Ruby & Sapphire Jewels
+  const crownGrad = ctx.createLinearGradient(-4.5, -14, 4.5, -10);
+  crownGrad.addColorStop(0, '#fef08a');
+  crownGrad.addColorStop(0.5, '#facc15');
+  crownGrad.addColorStop(1, '#d97706');
+  ctx.fillStyle = crownGrad;
+  ctx.strokeStyle = '#090d16';
+  ctx.lineWidth = 0.85;
+  ctx.beginPath();
+  ctx.moveTo(-4.4, -10.2);
+  ctx.lineTo(-4.8, -13.8);
+  ctx.lineTo(-2.0, -11.6);
+  ctx.lineTo(0, -14.8);
+  ctx.lineTo(2.0, -11.6);
+  ctx.lineTo(4.8, -13.8);
+  ctx.lineTo(4.4, -10.2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Crown Jewels
+  ctx.fillStyle = '#f43f5e';
+  ctx.beginPath();
+  ctx.arc(0, -11.4, 0.9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillRect(-3.2, -11.6, 1.0, 1.0);
+  ctx.fillRect(2.2, -11.6, 1.0, 1.0);
+
+  ctx.restore();
+}
 
 export function drawQueen(
   ctx: CanvasRenderingContext2D,
@@ -634,12 +1181,16 @@ export function drawQueen(
   mood: QueenMood = 'watching',
   animTick = 0
 ): void {
+  if (isHDCanvas(ctx)) {
+    drawHDQueenFigure(ctx, x, y, mood, animTick, 1.08);
+    return;
+  }
+
   const left = Math.round(x - 9);
   const top = Math.round(y - 12);
 
   blitMatrixSprite(ctx, `queen_${mood}`, left, top, QUEEN_MOOD_FRAMES[mood], QUEEN_PALETTE, false);
 
-  // Mood-reactive micro-indicators above/around The Queen on the playfield
   const bob = Math.floor(animTick / 15) % 2;
   if (mood === 'cheering') {
     ctx.fillStyle = '#fef08a';
@@ -660,9 +1211,47 @@ export function drawQueenPortrait(
   mood: QueenMood = 'watching',
   animTick = 0
 ): void {
-  qCtx.imageSmoothingEnabled = false;
+  if (isHDCanvas(qCtx)) {
+    const cw = qCtx.canvas?.width || 144;
+    const ch = qCtx.canvas?.height || 192;
+    const sx = cw / 36;
+    const sy = ch / 48;
 
-  // Mood-reactive royal sanctuary alcove backdrop (36x48)
+    qCtx.save();
+    qCtx.scale(sx, sy);
+
+    const bgMap: Record<QueenMood, { top: string; bot: string; glow: string; border: string }> = {
+      watching: { top: '#1e1b4b', bot: '#311042', glow: 'rgba(250, 204, 21, 0.35)', border: '#facc15' },
+      cheering: { top: '#064e3b', bot: '#1e3a2f', glow: 'rgba(253, 224, 71, 0.45)', border: '#fde047' },
+      praying: { top: '#451a03', bot: '#27130a', glow: 'rgba(251, 146, 60, 0.38)', border: '#fb923c' },
+      distressed: { top: '#4c0519', bot: '#1f0914', glow: 'rgba(244, 63, 94, 0.42)', border: '#f43f5e' },
+    };
+    const theme = bgMap[mood];
+
+    const grad = qCtx.createLinearGradient(0, 0, 0, 48);
+    grad.addColorStop(0, theme.top);
+    grad.addColorStop(1, theme.bot);
+    qCtx.fillStyle = grad;
+    qCtx.fillRect(0, 0, 36, 48);
+
+    // Warm Torchlight Alcove Halo
+    const halo = qCtx.createRadialGradient(18, 22, 2, 18, 22, 20);
+    halo.addColorStop(0, theme.glow);
+    halo.addColorStop(1, 'rgba(0,0,0,0)');
+    qCtx.fillStyle = halo;
+    qCtx.fillRect(0, 0, 36, 48);
+
+    // Ornate Gold Gothic Arch Trim
+    qCtx.strokeStyle = theme.border;
+    qCtx.lineWidth = 1.2;
+    qCtx.strokeRect(1.5, 1.5, 33, 45);
+
+    drawHDQueenFigure(qCtx, 18, 26, mood, animTick, 1.55);
+    qCtx.restore();
+    return;
+  }
+
+  qCtx.imageSmoothingEnabled = false;
   const bgMap: Record<QueenMood, { bg: string; arch: string; accent: string }> = {
     watching: { bg: '#161426', arch: '#2e2546', accent: '#60a5fa' },
     cheering: { bg: '#132a1e', arch: '#1e4631', accent: '#facc15' },
@@ -673,8 +1262,6 @@ export function drawQueenPortrait(
 
   qCtx.fillStyle = theme.bg;
   qCtx.fillRect(0, 0, 36, 48);
-
-  // Royal stone arch border
   qCtx.fillStyle = theme.arch;
   qCtx.fillRect(0, 0, 36, 2);
   qCtx.fillRect(0, 0, 2, 48);
@@ -682,10 +1269,8 @@ export function drawQueenPortrait(
   qCtx.fillStyle = theme.accent;
   qCtx.fillRect(4, 1, 28, 1);
 
-  // Render the 18x24 Queen sprite at an exact 2x integer pixel scale (36x48)
   renderPixelGrid(qCtx, 0, 0, QUEEN_MOOD_FRAMES[mood], QUEEN_PALETTE, 2, false);
 
-  // Subtle animated corner glints for cheering / distressed states
   const pulse = Math.floor(animTick / 12) % 2;
   if (mood === 'cheering') {
     qCtx.fillStyle = '#fef08a';
@@ -856,12 +1441,268 @@ export const GOBLIN_BARE_HEAD_ROWS: readonly string[] = [
   '..KDGGGGGGGDK.....', // 04 (brow ridge)
 ];
 
+function drawHDGoblin(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  options: GoblinRenderOptions
+): void {
+  const isDagger = options.variant === 'goblin_dagger' || options.variant === 'dagger';
+  const hp = options.hp ?? 2;
+  const maxHp = options.maxHp ?? 2;
+  const step = Math.abs(Math.floor(options.walkFrame ?? 0)) % 2;
+  const stagger = Boolean(options.stagger);
+  const stride = stagger ? 0 : step === 0 ? -1.8 : 1.8;
+  const f = Math.abs(Math.floor(options.flameFrame ?? 0)) % 4;
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  // 1. Warm Radial Torchlight Floor Pool for Torch Goblins (makes castle & character pop!)
+  if (!isDagger) {
+    const glowR = 25 + (f % 2) * 2;
+    const torchPool = ctx.createRadialGradient(7, -4, 1, 4, 0, glowR);
+    torchPool.addColorStop(0, 'rgba(251, 146, 60, 0.36)');
+    torchPool.addColorStop(0.55, 'rgba(234, 88, 12, 0.14)');
+    torchPool.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = torchPool;
+    ctx.beginPath();
+    ctx.arc(4, 0, glowR, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    const emeraldAura = ctx.createRadialGradient(0, 1, 1, 0, 1, 15);
+    emeraldAura.addColorStop(0, 'rgba(74, 222, 128, 0.22)');
+    emeraldAura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = emeraldAura;
+    ctx.beginPath();
+    ctx.arc(0, 1, 15, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Contact shadow
+  ctx.fillStyle = 'rgba(5, 8, 15, 0.56)';
+  ctx.beginPath();
+  ctx.ellipse(0, 11.2, 8.2, 3.0, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Boots & Stride Legs
+  ctx.fillStyle = '#451a03';
+  ctx.strokeStyle = '#090d16';
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.roundRect(-5.6, 7.2 + stride * 0.45, 4.4, 4.0, 1.2);
+  ctx.roundRect(1.2, 7.2 - stride * 0.45, 4.4, 4.0, 1.2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Muscular Emerald-Lime Torso & Leather War Harness
+  const skinGrad = ctx.createLinearGradient(0, -6, 0, 8);
+  skinGrad.addColorStop(0, '#4ade80');
+  skinGrad.addColorStop(0.5, '#22c55e');
+  skinGrad.addColorStop(1, '#15803d');
+  ctx.fillStyle = skinGrad;
+  ctx.beginPath();
+  ctx.roundRect(-5.8, -2.5, 11.6, 10.2, 2.5);
+  ctx.fill();
+  ctx.stroke();
+
+  // Studded Leather Belt & Bronze Skull Buckle
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(-5.6, 3.4, 11.2, 3.4);
+  ctx.fillStyle = '#f59e0b';
+  ctx.fillRect(-1.8, 3.2, 3.6, 3.0);
+
+  // Pointed Goblin Ears (wide & unmistakable silhouette)
+  ctx.fillStyle = '#22c55e';
+  ctx.beginPath();
+  ctx.moveTo(-5.2, -7.2);
+  ctx.lineTo(-11.2, -9.2);
+  ctx.lineTo(-5.6, -3.8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(5.2, -7.2);
+  ctx.lineTo(11.2, -9.2);
+  ctx.lineTo(5.6, -3.8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Fierce Goblin Head
+  ctx.fillStyle = skinGrad;
+  ctx.beginPath();
+  ctx.arc(0, -6.2, 5.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Glowing Amber Eyes + Red Slit Pupils + White Fangs
+  ctx.fillStyle = stagger ? '#ffffff' : '#facc15';
+  ctx.beginPath();
+  ctx.arc(-2.2, -6.4, 1.45, 0, Math.PI * 2);
+  ctx.arc(2.2, -6.4, 1.45, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#dc2626';
+  ctx.fillRect(-2.5, -6.9, 0.8, 1.1);
+  ctx.fillRect(1.9, -6.9, 0.8, 1.1);
+
+  // Snarling Mouth & Twin White Fangs
+  ctx.fillStyle = '#090d16';
+  ctx.fillRect(-3.2, -3.8, 6.4, stagger ? 2.4 : 1.5);
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(-2.6, -2.3);
+  ctx.lineTo(-1.8, -4.4);
+  ctx.lineTo(-1.0, -2.3);
+  ctx.moveTo(1.0, -2.3);
+  ctx.lineTo(1.8, -4.4);
+  ctx.lineTo(2.6, -2.3);
+  ctx.fill();
+
+  // 2-HP Riveted Horned Iron-Bronze Helmet (stripped off when hp === 1!)
+  if (hp >= 2) {
+    // Side Iron Horns
+    ctx.fillStyle = '#e7e5e4';
+    ctx.beginPath();
+    ctx.moveTo(-4.8, -9.5);
+    ctx.lineTo(-8.8, -13.2);
+    ctx.lineTo(-3.0, -11.2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(4.8, -9.5);
+    ctx.lineTo(8.8, -13.2);
+    ctx.lineTo(3.0, -11.2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    const helmGrad = ctx.createLinearGradient(-5, -13, 5, -8);
+    helmGrad.addColorStop(0, '#cbd5e1');
+    helmGrad.addColorStop(0.5, '#64748b');
+    helmGrad.addColorStop(1, '#334155');
+    ctx.fillStyle = helmGrad;
+    ctx.beginPath();
+    ctx.arc(0, -8.5, 5.9, Math.PI, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Bronze Crest & Rim
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(-6.0, -9.2, 12.0, 1.5);
+    ctx.fillRect(-1.1, -14.2, 2.2, 5.2);
+  } else {
+    // Bare green scalp with scruffy dark tuft & battle bruise
+    ctx.strokeStyle = '#14532d';
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(-2, -10.5);
+    ctx.lineTo(1.5, -9.2);
+    ctx.stroke();
+  }
+
+  // Weapon Arm: Blazing Siege Torch vs. Gleaming Steel Dagger
+  if (!isDagger) {
+    // Torch Shaft
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(5.2, 1.5);
+    ctx.lineTo(9.2, -8.2);
+    ctx.stroke();
+
+    // Multi-layered Animated Flame
+    const flickerY = (f % 2) * 1.3;
+    ctx.fillStyle = '#ea580c';
+    ctx.beginPath();
+    ctx.arc(9.4, -10.2 - flickerY * 0.5, 4.0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.arc(9.4, -10.0 - flickerY * 0.3, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(9.4, -9.6, 1.3, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    // Raised Wicked Steel Dagger
+    const bladeRaise = step === 0 ? -1.5 : 1.0;
+    ctx.save();
+    ctx.translate(7.5, -2.5 + bladeRaise);
+    ctx.rotate(-0.35);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(-2.5, 1.5, 5.0, 1.6);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.strokeStyle = '#090d16';
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(0, -8.2);
+    ctx.lineTo(2.2, 1.5);
+    ctx.lineTo(-2.2, 1.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Stagger '!!' Shockburst
+  if (stagger) {
+    ctx.font = 'bold 7px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fef08a';
+    ctx.fillText('!!', 0, -15.5);
+    ctx.textAlign = 'left';
+  } else if (maxHp >= 2) {
+    // Crisp 2-Pip Overhead Armor/HP Bar
+    const barW = 12;
+    const barX = -6;
+    const barY = -16.8;
+    ctx.fillStyle = 'rgba(9, 13, 22, 0.85)';
+    ctx.fillRect(barX - 0.8, barY - 0.8, barW + 1.6, 3.2);
+    for (let i = 0; i < maxHp; i++) {
+      const pipW = (barW - 1) / maxHp;
+      ctx.fillStyle = i < hp ? (hp === 2 ? '#4ade80' : '#fb923c') : '#1e293b';
+      ctx.fillRect(barX + i * (pipW + 1), barY, pipW, 1.6);
+    }
+  }
+
+  ctx.restore();
+
+  // Lodged arrows
+  const lodged = options.lodgedArrows;
+  if (typeof lodged === 'number' && lodged > 0) {
+    for (let i = 0; i < lodged; i++) {
+      const ox = i === 0 ? 0 : i % 2 === 1 ? -4 : 4;
+      drawLodgedArrow(ctx, Math.round(x + ox), Math.round(y + 6), 0);
+    }
+  } else if (Array.isArray(lodged)) {
+    for (const item of lodged) {
+      drawLodgedArrow(
+        ctx,
+        Math.round(x + (item.offsetX ?? 0)),
+        Math.round(y + (item.offsetY ?? 6)),
+        item.angle ?? 0
+      );
+    }
+  }
+}
+
 export function drawGoblin(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   options: GoblinRenderOptions = {}
 ): void {
+  if (isHDCanvas(ctx)) {
+    drawHDGoblin(ctx, x, y, options);
+    return;
+  }
+
   const left = Math.round(x - 9);
   const top = Math.round(y - 10);
   const isDagger = options.variant === 'goblin_dagger' || options.variant === 'dagger';
@@ -926,7 +1767,7 @@ export const BAT_PALETTE: Record<string, string> = {
   K: '#0f0a19', // Deep midnight-black 1px outline
   B: '#1e1b2e', // Dark cavern bat body core
   D: '#3b0764', // Deep indigo-purple wing/body shadow
-  V: '#581c87', // Dark violet wing membrane shadow
+  V: '#581c87', // Dark violet membrane shadow
   P: '#7e22ce', // Rich purple wing membrane midtone
   M: '#9333ea', // Vibrant magenta-purple wing interior
   L: '#a855f7', // Bright orchid-violet upper wing ridge
@@ -1036,6 +1877,93 @@ function resolveBatFrame(frame: BatFrame): BatFrameName {
   return frame;
 }
 
+function drawHDBat(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  resolved: BatFrameName
+): void {
+  const tipYMap: Record<BatFrameName, number> = {
+    up: -8.5,
+    mid_up: -5.5,
+    spread: -1.5,
+    mid: 1.5,
+    down: 6.2,
+  };
+  const tipY = tipYMap[resolved];
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Soft Neon-Amethyst Visibility Halo
+  const aura = ctx.createRadialGradient(0, 0, 1, 0, 0, 15);
+  aura.addColorStop(0, 'rgba(216, 180, 254, 0.30)');
+  aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = aura;
+  ctx.beginPath();
+  ctx.arc(0, 0, 15, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Scalloped Orchid-Amethyst Wings (Left & Right)
+  const wingGrad = ctx.createLinearGradient(0, -8, 0, 7);
+  wingGrad.addColorStop(0, '#e879f9');
+  wingGrad.addColorStop(0.5, '#a855f7');
+  wingGrad.addColorStop(1, '#581c87');
+  ctx.fillStyle = wingGrad;
+  ctx.strokeStyle = '#090d16';
+  ctx.lineWidth = 1.1;
+
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(side * 2.5, -2.0);
+    ctx.quadraticCurveTo(side * 8.5, tipY - 3.8, side * 13.0, tipY);
+    ctx.quadraticCurveTo(side * 10.2, tipY + 3.2, side * 8.0, 3.8);
+    ctx.quadraticCurveTo(side * 5.2, 1.5, side * 3.0, 3.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Bright Lavender Wing Ridge Highlight
+    ctx.strokeStyle = '#f5d0fe';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(side * 2.8, -1.8);
+    ctx.quadraticCurveTo(side * 8.2, tipY - 3.2, side * 12.2, tipY);
+    ctx.stroke();
+    ctx.strokeStyle = '#090d16';
+    ctx.lineWidth = 1.1;
+  }
+
+  // Velvet Cavern Body & Pointed Ears
+  ctx.fillStyle = '#2e1065';
+  ctx.beginPath();
+  ctx.ellipse(0, 0.5, 4.4, 4.8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(-3.2, -3.2);
+  ctx.lineTo(-4.2, -7.2);
+  ctx.lineTo(-1.0, -4.0);
+  ctx.moveTo(3.2, -3.2);
+  ctx.lineTo(4.2, -7.2);
+  ctx.lineTo(1.0, -4.0);
+  ctx.fill();
+  ctx.stroke();
+
+  // Glowing Golden Eyes & Tiny White Fangs
+  ctx.fillStyle = '#fde047';
+  ctx.beginPath();
+  ctx.arc(-1.6, -0.8, 1.15, 0, Math.PI * 2);
+  ctx.arc(1.6, -0.8, 1.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(-1.5, 1.5, 0.9, 1.4);
+  ctx.fillRect(0.6, 1.5, 0.9, 1.4);
+
+  ctx.restore();
+}
+
 export function drawBat(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -1043,6 +1971,10 @@ export function drawBat(
   frame: BatFrame = 0
 ): void {
   const resolved = resolveBatFrame(frame);
+  if (isHDCanvas(ctx)) {
+    drawHDBat(ctx, x, y, resolved);
+    return;
+  }
   const left = Math.round(x - 10);
   const top = Math.round(y - 7);
   blitMatrixSprite(ctx, `bat_${resolved}`, left, top, BAT_FRAMES[resolved], BAT_PALETTE, false);
@@ -1215,15 +2147,70 @@ export function drawWoodPalisade(
 ): void {
   const drawX = Math.round(x - 12);
   const drawY = Math.round(y - 9);
-  blitMatrixSprite(
-    ctx,
-    broken ? 'palisade_broken' : 'palisade_intact',
-    drawX,
-    drawY,
-    broken ? PALISADE_BROKEN_24x18 : PALISADE_INTACT_24x18,
-    OBSTACLE_PROJECTILE_PALETTE,
-    flash
-  );
+
+  if (isHDCanvas(ctx)) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = 'rgba(5, 8, 15, 0.5)';
+    ctx.fillRect(-12, 7, 24, 3);
+
+    const stakeOffsets = [-10, -6, -2, 2, 6, 10];
+    for (let idx = 0; idx < stakeOffsets.length; idx++) {
+      const sx = stakeOffsets[idx];
+      const isCenterGap = broken && (idx === 2 || idx === 3);
+      const topY = isCenterGap ? 2 : -8.5;
+
+      const woodGrad = ctx.createLinearGradient(sx - 1.8, 0, sx + 1.8, 0);
+      woodGrad.addColorStop(0, flash ? '#ffffff' : '#f59e0b');
+      woodGrad.addColorStop(0.5, flash ? '#fef08a' : '#b45309');
+      woodGrad.addColorStop(1, '#451a03');
+
+      ctx.fillStyle = woodGrad;
+      ctx.strokeStyle = '#1c0d04';
+      ctx.lineWidth = 0.85;
+      ctx.beginPath();
+      if (isCenterGap) {
+        ctx.moveTo(sx - 1.8, 8.5);
+        ctx.lineTo(sx - 1.8, topY + 1.5);
+        ctx.lineTo(sx, topY - 1.0);
+        ctx.lineTo(sx + 1.8, topY + 1.8);
+        ctx.lineTo(sx + 1.8, 8.5);
+      } else {
+        ctx.moveTo(sx - 1.8, 8.5);
+        ctx.lineTo(sx - 1.8, -5.5);
+        ctx.lineTo(sx, topY);
+        ctx.lineTo(sx + 1.8, -5.5);
+        ctx.lineTo(sx + 1.8, 8.5);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // Horizontal Rope/Iron Binding Bands
+    ctx.fillStyle = '#3b200e';
+    if (!broken) {
+      ctx.fillRect(-11.8, -2.8, 23.6, 2.2);
+      ctx.fillStyle = '#d97706';
+      for (const kx of [-9, -5, -1, 3, 7]) ctx.fillRect(kx, -2.5, 2.0, 1.4);
+    } else {
+      ctx.fillRect(-11.8, -2.8, 7.5, 2.2);
+      ctx.fillRect(4.3, -2.8, 7.5, 2.2);
+    }
+    ctx.fillStyle = '#3b200e';
+    ctx.fillRect(-11.8, 4.0, 23.6, 2.2);
+    ctx.restore();
+  } else {
+    blitMatrixSprite(
+      ctx,
+      broken ? 'palisade_broken' : 'palisade_intact',
+      drawX,
+      drawY,
+      broken ? PALISADE_BROKEN_24x18 : PALISADE_INTACT_24x18,
+      OBSTACLE_PROJECTILE_PALETTE,
+      flash
+    );
+  }
 
   if (typeof lodgedArrows === 'number') {
     for (let i = 0; i < lodgedArrows; i++) {
@@ -1254,15 +2241,77 @@ export function drawSiegeCrate(
   const isCracked = hp < maxHp;
   const drawX = Math.round(x - 10);
   const drawY = Math.round(y - 9);
-  blitMatrixSprite(
-    ctx,
-    isCracked ? 'crate_cracked' : 'crate_intact',
-    drawX,
-    drawY,
-    isCracked ? CRATE_CRACKED_20x18 : CRATE_INTACT_20x18,
-    OBSTACLE_PROJECTILE_PALETTE,
-    flash
-  );
+
+  if (isHDCanvas(ctx)) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = 'rgba(5, 8, 15, 0.52)';
+    ctx.fillRect(-10, 7.5, 20.5, 3);
+
+    const plankGrad = ctx.createLinearGradient(-10, -9, 10, 9);
+    plankGrad.addColorStop(0, flash ? '#ffffff' : '#d97706');
+    plankGrad.addColorStop(0.55, flash ? '#fef08a' : '#9a3412');
+    plankGrad.addColorStop(1, '#431407');
+    ctx.fillStyle = plankGrad;
+    ctx.strokeStyle = '#1c0a04';
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.roundRect(-10, -9, 20, 18, 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Inner Recessed Plank Box + Diagonal Oak Brace
+    ctx.fillStyle = '#7c2d12';
+    ctx.fillRect(-7.2, -6.2, 14.4, 12.4);
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(-7.2, -2.0);
+    ctx.lineTo(7.2, -2.0);
+    ctx.moveTo(-7.2, 2.2);
+    ctx.lineTo(7.2, 2.2);
+    ctx.stroke();
+
+    ctx.strokeStyle = flash ? '#ffffff' : '#f59e0b';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(-6.8, 5.8);
+    ctx.lineTo(6.8, -5.8);
+    ctx.stroke();
+
+    // Gold-Brass Corner Studs (signals valuable loot inside!)
+    ctx.fillStyle = '#facc15';
+    for (const [cx, cy] of [
+      [-8.5, -7.5],
+      [6.9, -7.5],
+      [-8.5, 5.9],
+      [6.9, 5.9],
+    ]) {
+      ctx.fillRect(cx, cy, 1.8, 1.8);
+    }
+
+    if (isCracked) {
+      ctx.strokeStyle = '#090d16';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-2, -8.5);
+      ctx.lineTo(0.8, -1.5);
+      ctx.lineTo(-1.5, 3.2);
+      ctx.lineTo(2.0, 8.2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  } else {
+    blitMatrixSprite(
+      ctx,
+      isCracked ? 'crate_cracked' : 'crate_intact',
+      drawX,
+      drawY,
+      isCracked ? CRATE_CRACKED_20x18 : CRATE_INTACT_20x18,
+      OBSTACLE_PROJECTILE_PALETTE,
+      flash
+    );
+  }
 
   if (typeof lodgedArrows === 'number') {
     for (let i = 0; i < lodgedArrows; i++) {
@@ -1290,6 +2339,75 @@ export function drawBlueIronBlock(
 ): void {
   const drawX = Math.round(x - 10);
   const drawY = Math.round(y - 9);
+
+  if (isHDCanvas(ctx)) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = 'rgba(5, 8, 18, 0.58)';
+    ctx.fillRect(-10.2, 7.5, 20.8, 3.2);
+
+    const ironGrad = ctx.createLinearGradient(-10, -9, 10, 9);
+    ironGrad.addColorStop(0, flash ? '#ffffff' : '#bae6fd');
+    ironGrad.addColorStop(0.28, flash ? '#e0f2fe' : '#60a5fa');
+    ironGrad.addColorStop(0.68, '#2563eb');
+    ironGrad.addColorStop(1, '#1e3a8a');
+
+    ctx.fillStyle = ironGrad;
+    ctx.strokeStyle = '#091122';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(-10, -9, 20, 18, 2.2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Inner Beveled Steel Plate
+    const faceGrad = ctx.createLinearGradient(-7.5, -6.5, 7.5, 6.5);
+    faceGrad.addColorStop(0, '#3b82f6');
+    faceGrad.addColorStop(0.5, '#1d4ed8');
+    faceGrad.addColorStop(1, '#172554');
+    ctx.fillStyle = faceGrad;
+    ctx.fillRect(-7.5, -6.5, 15, 13);
+
+    // Diagonal Specular Sheen
+    ctx.strokeStyle = 'rgba(224, 242, 254, 0.65)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(-5.0, 5.2);
+    ctx.lineTo(5.2, -5.0);
+    ctx.stroke();
+
+    // 4 Gleaming Silver Corner Rivets
+    for (const [rx, ry] of [
+      [-6.0, -5.0],
+      [6.0, -5.0],
+      [-6.0, 5.0],
+      [6.0, 5.0],
+    ]) {
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(rx + 0.4, ry + 0.5, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.arc(rx, ry, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const glintPhase = frame % 90;
+    if (glintPhase < 18 || flash) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(4.0, -6.2);
+      ctx.lineTo(8.0, -6.2);
+      ctx.moveTo(6.0, -8.2);
+      ctx.lineTo(6.0, -4.2);
+      ctx.stroke();
+    }
+    ctx.restore();
+    return;
+  }
+
   blitMatrixSprite(
     ctx,
     'blue_iron_block',
@@ -1933,32 +3051,66 @@ export function drawTopSanctum(
   ctx: CanvasRenderingContext2D,
   sanctumUnlocked = false,
   animTick = 0,
-  paletteOrStage: TerrainPalette | number = 'meadow'
+  paletteOrStage: TerrainPalette | number = 'meadow',
+  portcullisProgress?: number
 ): void {
   const pal = resolveTerrainPalette(paletteOrStage);
+  const progress =
+    portcullisProgress !== undefined
+      ? Math.max(0, Math.min(1, portcullisProgress))
+      : sanctumUnlocked
+      ? 1
+      : 0;
 
   // Flanking stone castle bastions on Top Row (left: 2..82, right: 158..238, y: 22..44)
   ctx.fillStyle = pal.wallStoneDark;
-  ctx.fillRect(2, 22, 76, 12);
-  ctx.fillRect(162, 22, 76, 12);
+  ctx.fillRect(2, 22, 76, 14);
+  ctx.fillRect(162, 22, 76, 14);
   ctx.fillStyle = pal.wallStoneMid;
-  ctx.fillRect(4, 24, 72, 8);
-  ctx.fillRect(164, 24, 72, 8);
+  ctx.fillRect(4, 24, 72, 9);
+  ctx.fillRect(164, 24, 72, 9);
 
   // Royal Sanctum Alcove Chamber (x = 80..160, y = 22..54)
-  ctx.fillStyle = '#1b162a';
+  ctx.fillStyle = '#1e1533';
   ctx.fillRect(80, 22, 80, 32);
 
-  // Royal Crimson & Gold Runner Carpet leading up to Queen Aurelia (x = 104..136, y = 24..56)
-  ctx.fillStyle = '#7f1d1d';
-  ctx.fillRect(104, 24, 32, 32);
-  ctx.fillStyle = '#b91c1c';
-  ctx.fillRect(108, 24, 24, 32);
-  ctx.fillStyle = '#fbbf24';
-  ctx.fillRect(105, 24, 2, 32);
-  ctx.fillRect(133, 24, 2, 32);
+  if (isHDCanvas(ctx)) {
+    // Warm Golden Throne-Room Glow inside Queen Aurelia's Sanctum
+    const chamberGlow = ctx.createRadialGradient(120, 36, 3, 120, 42, 46);
+    chamberGlow.addColorStop(0, sanctumUnlocked ? 'rgba(253, 224, 71, 0.50)' : 'rgba(251, 191, 36, 0.30)');
+    chamberGlow.addColorStop(0.6, 'rgba(168, 85, 247, 0.18)');
+    chamberGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = chamberGlow;
+    ctx.fillRect(74, 22, 92, 48);
+  }
 
-  // Stone Sanctum Pillars at x = 80..88 and x = 152..160
+  // Royal Crimson & Gold Runner Carpet leading up to Queen Aurelia (x = 104..136, y = 24..58)
+  ctx.fillStyle = '#7f1d1d';
+  ctx.fillRect(104, 24, 32, 34);
+  ctx.fillStyle = '#dc2626';
+  ctx.fillRect(108, 24, 24, 34);
+  ctx.fillStyle = '#facc15';
+  ctx.fillRect(105, 24, 2, 34);
+  ctx.fillRect(133, 24, 2, 34);
+
+  // Golden Sanctuary Light Rays streaming out as Portcullis opens!
+  if (isHDCanvas(ctx) && progress > 0.05) {
+    ctx.save();
+    const rayGrad = ctx.createLinearGradient(120, 46, 120, 88);
+    rayGrad.addColorStop(0, `rgba(253, 224, 71, ${(0.42 * progress).toFixed(2)})`);
+    rayGrad.addColorStop(1, 'rgba(253, 224, 71, 0)');
+    ctx.fillStyle = rayGrad;
+    ctx.beginPath();
+    ctx.moveTo(92, 52);
+    ctx.lineTo(148, 52);
+    ctx.lineTo(166, 88);
+    ctx.lineTo(74, 88);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Stone Sanctum Pillars & Royal Banners at x = 80..88 and x = 152..160
   for (const px of [80, 152]) {
     ctx.fillStyle = '#14161d';
     ctx.fillRect(px, 22, 8, 34);
@@ -1966,9 +3118,14 @@ export function drawTopSanctum(
     ctx.fillRect(px + 1, 23, 6, 32);
     ctx.fillStyle = pal.wallStoneLight;
     ctx.fillRect(px + 2, 23, 2, 32);
+    // Royal Gold-Trimmed Crimson Banner on each Bastion
+    ctx.fillStyle = '#be123c';
+    ctx.fillRect(px === 80 ? 64 : 168, 25, 8, 13);
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(px === 80 ? 66 : 170, 28, 4, 4);
   }
 
-  // Flickering Royal Alcove Torches (x = 92, 146)
+  // Flickering Royal Alcove Braziers (x = 92, 146)
   const flicker = Math.floor(animTick / 6) % 2;
   for (const tx of [92, 146]) {
     ctx.fillStyle = '#47250d';
@@ -1979,50 +3136,159 @@ export function drawTopSanctum(
     ctx.fillRect(tx, 28, 2, 2);
   }
 
-  // Sanctum Portcullis Gate at y = 52..56 (x = 88..152)
-  if (!sanctumUnlocked) {
-    // Locked heavy iron crossbar & vertical iron spikes blocking entry
+  // Animated Rising Iron Portcullis Gate at y = 52..56 (slides smoothly upward as progress -> 1)
+  if (progress < 0.98) {
+    const lift = progress * 13;
+    const canClip =
+      isHDCanvas(ctx) && typeof ctx.rect === 'function' && typeof ctx.clip === 'function';
+    if (canClip) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(86, 22, 68, 36);
+      ctx.clip();
+    }
+
     ctx.fillStyle = '#0f172a';
-    ctx.fillRect(88, 52, 64, 5);
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(88, 53, 64, 2);
+    ctx.fillRect(88, 52 - lift, 64, 5);
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(88, 53 - lift, 64, 2);
     for (let bx = 92; bx <= 148; bx += 7) {
       ctx.fillStyle = '#1e293b';
-      ctx.fillRect(bx - 1, 47, 3, 10);
-      ctx.fillStyle = '#94a3b8';
-      ctx.fillRect(bx, 47, 1, 9);
+      ctx.fillRect(bx - 1, 45 - lift, 3, 12);
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(bx, 45 - lift, 1, 11);
     }
-    // Golden Padlock Emblem in center
-    ctx.fillStyle = '#b45309';
-    ctx.fillRect(117, 50, 6, 6);
-    ctx.fillStyle = '#facc15';
-    ctx.fillRect(118, 51, 4, 4);
-  } else {
+    if (!sanctumUnlocked) {
+      // Golden Royal Seal Padlock Emblem in center
+      ctx.fillStyle = '#b45309';
+      ctx.fillRect(116, 49, 8, 7);
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(117, 50, 6, 5);
+    }
+    if (canClip) {
+      ctx.restore();
+    }
+  }
+
+  if (sanctumUnlocked) {
     // UNLOCKED! Glowing golden threshold + pulsing upward chevrons inviting Adrian in
     const pulse = Math.floor(animTick / 8) % 2;
     ctx.fillStyle = pulse === 0 ? '#facc15' : '#fde047';
     ctx.fillRect(88, 53, 64, 2);
-    for (const cy of [68, 61]) {
+    for (const cy of [69, 61]) {
       const yShift = cy - pulse * 2;
-      ctx.fillStyle = '#facc15';
+      ctx.fillStyle = '#fde047';
       ctx.fillRect(119, yShift, 2, 2);
-      ctx.fillRect(117, yShift + 2, 6, 1);
-      ctx.fillRect(115, yShift + 3, 10, 1);
+      ctx.fillRect(117, yShift + 2, 6, 1.5);
+      ctx.fillRect(115, yShift + 3.5, 10, 1.5);
     }
   }
 }
 
 /**
- * Renders the 240x320 Playfield Terrain Backdrop, Castle Masonry, Top Queen Sanctum & Entrance Gate
+ * Renders the 240x320 Playfield Terrain Backdrop, Rich Torchlit HD Castle Masonry, Top Queen Sanctum & Entrance Gate
  */
 export function drawBackdrop(
   ctx: CanvasRenderingContext2D,
   paletteOrStage: TerrainPalette | number = 'meadow',
   animTick = 0,
   activeColumnIndex = 0,
-  sanctumUnlocked = false
+  sanctumUnlocked = false,
+  portcullisProgress?: number
 ): void {
   const pal = resolveTerrainPalette(paletteOrStage);
+
+  if (isHDCanvas(ctx)) {
+    // Rich Torchlit HD Sculpted Castle Stone Floor
+    const hdTheme =
+      pal.id === 'meadow'
+        ? { baseA: '#1d3124', baseB: '#18291e', mortar: '#101d15', bevel: 'rgba(134, 239, 172, 0.07)' }
+        : pal.id === 'courtyard'
+        ? { baseA: '#35291e', baseB: '#2d2219', mortar: '#1c150f', bevel: 'rgba(253, 186, 116, 0.08)' }
+        : { baseA: '#1e2436', baseB: '#191e2e', mortar: '#0f1320', bevel: 'rgba(147, 197, 253, 0.08)' };
+
+    ctx.fillStyle = hdTheme.baseA;
+    ctx.fillRect(0, 22, 240, 244);
+
+    // Sculpted Flagstone Masonry Course Grid
+    const tileH = 16;
+    const tileW = 24;
+    for (let r = 0; r < 16; r++) {
+      const ry = 22 + r * tileH;
+      const staggerX = (r % 2) * (tileW / 2);
+      for (let c = -1; c < 11; c++) {
+        const rx = c * tileW + staggerX;
+        if ((r + c) % 2 === 0) {
+          ctx.fillStyle = hdTheme.baseB;
+          ctx.fillRect(rx + 0.5, ry + 0.5, tileW - 1, tileH - 1);
+        }
+        ctx.fillStyle = hdTheme.bevel;
+        ctx.fillRect(rx + 1, ry + 1, tileW - 2, 1);
+      }
+      ctx.fillStyle = hdTheme.mortar;
+      ctx.fillRect(2, ry, 236, 0.8);
+    }
+
+    // Castle Side Curtain Walls & Flickering Torch Sconces casting Golden Light Pools!
+    ctx.fillStyle = '#151924';
+    ctx.fillRect(2, 36, 5, 228);
+    ctx.fillRect(233, 36, 5, 228);
+    ctx.fillStyle = '#2d3548';
+    ctx.fillRect(5, 36, 1.5, 228);
+    ctx.fillRect(233, 36, 1.5, 228);
+
+    const torchFlicker = Math.sin(animTick * 0.22) * 3;
+    const wallTorches: Array<[number, number]> = [
+      [8, 108],
+      [232, 108],
+      [8, 196],
+      [232, 196],
+      [94, 34],
+      [146, 34],
+      [98, 296],
+      [142, 296],
+    ];
+    for (const [tx, ty] of wallTorches) {
+      const poolR = 44 + torchFlicker;
+      const pool = ctx.createRadialGradient(tx, ty, 2, tx, ty, poolR);
+      pool.addColorStop(0, 'rgba(251, 191, 36, 0.24)');
+      pool.addColorStop(0.5, 'rgba(234, 88, 12, 0.09)');
+      pool.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = pool;
+      ctx.beginPath();
+      ctx.arc(tx, ty, poolR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Draw Visible Side-Wall Iron Torch Sconces & Flames
+    const fShift = Math.floor(animTick / 5) % 2;
+    for (const sy of [108, 196]) {
+      for (const sx of [6, 234]) {
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(sx - 1.5, sy, 3, 4);
+        ctx.fillStyle = '#ea580c';
+        ctx.beginPath();
+        ctx.arc(sx, sy - 2 - fShift * 0.6, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.arc(sx, sy - 1.8, 1.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Top Royal Sanctum & Bottom Castle Gate
+    drawTopSanctum(ctx, sanctumUnlocked, animTick, paletteOrStage, portcullisProgress);
+    drawSanctuary(ctx, 'watching', animTick, activeColumnIndex, paletteOrStage);
+
+    // Crisp Royal Gold Outer Frame
+    ctx.fillStyle = '#e2b43b';
+    ctx.fillRect(0, 0, 2, 320);
+    ctx.fillRect(238, 0, 2, 320);
+    ctx.fillRect(0, 0, 240, 2);
+    ctx.fillRect(0, 318, 240, 2);
+    return;
+  }
 
   // 1. Playfield Base & 4 Subtle Tactical Sector Bands (y = 22..264)
   for (let col = 0; col < 4; col++) {
@@ -2074,7 +3340,7 @@ export function drawBackdrop(
   }
 
   // 4. Top Royal Sanctum Alcove & Portcullis Gate (y = 22..56)
-  drawTopSanctum(ctx, sanctumUnlocked, animTick, paletteOrStage);
+  drawTopSanctum(ctx, sanctumUnlocked, animTick, paletteOrStage, portcullisProgress);
 
   // 5. Bottom Castle Entrance Courtyard Zone (y = 264..320)
   drawSanctuary(ctx, 'watching', animTick, activeColumnIndex, paletteOrStage);
@@ -2105,9 +3371,17 @@ export function drawSanctuary(
   ctx.fillStyle = pal.sanctuaryFloor;
   ctx.fillRect(2, 264, 236, 54);
 
+  if (isHDCanvas(ctx)) {
+    const entGlow = ctx.createRadialGradient(120, 286, 4, 120, 286, 54);
+    entGlow.addColorStop(0, 'rgba(251, 191, 36, 0.16)');
+    entGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = entGlow;
+    ctx.fillRect(40, 264, 160, 36);
+  }
+
   // Subtle threshold cobble line (y = 264)
-  ctx.fillStyle = '#3b200e';
-  ctx.fillRect(2, 264, 236, 1);
+  ctx.fillStyle = '#47250d';
+  ctx.fillRect(2, 264, 236, 1.2);
   for (let col = 0; col < 4; col++) {
     const cx = col * 60 + 30;
     ctx.fillStyle = col === activeColumnIndex ? '#facc15' : '#475569';
@@ -2222,7 +3496,6 @@ export function drawEnemyProjectile(
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(proj.angle ?? frame * 0.35);
-    // Crisp spinning steel dagger
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(-2, -6, 5, 12);
     ctx.fillStyle = '#e2e8f0';
@@ -2235,7 +3508,16 @@ export function drawEnemyProjectile(
     ctx.fillRect(-1, 4, 3, 2);
     ctx.restore();
   } else {
-    // Flickering Goblin Torch Fireball
+    if (isHDCanvas(ctx)) {
+      const glow = ctx.createRadialGradient(cx, cy, 1, cx, cy, 10);
+      glow.addColorStop(0, 'rgba(254, 240, 138, 0.9)');
+      glow.addColorStop(0.5, 'rgba(249, 115, 22, 0.6)');
+      glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
     const pulse = frame % 2;
     ctx.fillStyle = '#991b1b';
     ctx.fillRect(cx - 4, cy - 4, 9, 9);
@@ -2260,8 +3542,7 @@ export function drawPickupItem(
   const cx = Math.round(pickup.x);
   const cy = Math.round(pickup.y + bob);
 
-  // Subtle golden aura ring beneath item
-  ctx.fillStyle = 'rgba(250, 204, 21, 0.25)';
+  ctx.fillStyle = 'rgba(250, 204, 21, 0.30)';
   ctx.fillRect(cx - 6, cy - 6, 13, 13);
   ctx.fillStyle = '#121318';
   ctx.fillRect(cx - 5, cy - 5, 11, 11);
@@ -2281,7 +3562,6 @@ export function drawPickupItem(
     ctx.fillRect(cx - 3, cy - 4, 3, 2);
     ctx.fillRect(cx + 1, cy - 4, 3, 2);
   } else {
-    // heavy_ammo (Great Arrow Quiver)
     ctx.fillStyle = '#7c2d12';
     ctx.fillRect(cx - 4, cy - 4, 9, 9);
     ctx.fillStyle = '#fb923c';
@@ -2291,6 +3571,115 @@ export function drawPickupItem(
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(cx, cy - 4, 1, 5);
   }
+}
+
+function wrapDialogueWords(text: string, maxLen: number): string[] {
+  const words = text.trim().split(/\s+/);
+  const out: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    if (!cur) {
+      cur = w;
+    } else if (cur.length + 1 + w.length <= maxLen) {
+      cur += ` ${w}`;
+    } else {
+      out.push(cur);
+      cur = w;
+    }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+/**
+ * Renders Queen Aurelia's Live In-Castle Royal Parchment Speech Ribbon below the Top Sanctum!
+ */
+export function drawQueenSpeechBubble(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  mood: QueenMood = 'watching',
+  _animTick = 0
+): void {
+  if (!text) return;
+  const lines = wrapDialogueWords(text, 48).slice(0, 3);
+  const boxH = lines.length === 1 ? 15 : lines.length === 2 ? 22 : 29;
+  const boxX = 12;
+  const boxY = 58;
+  const boxW = 216;
+
+  if (!isHDCanvas(ctx)) {
+    ctx.fillStyle = '#fef3c7';
+    ctx.fillRect(boxX, boxY, boxW, boxH);
+    ctx.strokeStyle = '#b45309';
+    ctx.strokeRect(boxX, boxY, boxW, boxH);
+    ctx.font = 'bold 6px serif';
+    ctx.fillStyle = '#450a0a';
+    ctx.textAlign = 'center';
+    lines.forEach((ln, i) => ctx.fillText(ln, 120, boxY + 9 + i * 8));
+    ctx.textAlign = 'left';
+    return;
+  }
+
+  ctx.save();
+  // Drop shadow over castle stones
+  ctx.fillStyle = 'rgba(5, 8, 16, 0.55)';
+  ctx.beginPath();
+  ctx.roundRect(boxX + 1.5, boxY + 2, boxW, boxH, 4);
+  ctx.fill();
+
+  // Warm Ivory-Vellum Parchment Gradient + Upward Speech Pointer toward Queen Aurelia (120, 52)
+  const vellum = ctx.createLinearGradient(boxX, boxY, boxX, boxY + boxH);
+  vellum.addColorStop(0, '#fffbeb');
+  vellum.addColorStop(0.6, '#fef3c7');
+  vellum.addColorStop(1, '#fde68a');
+  ctx.fillStyle = vellum;
+  ctx.strokeStyle = mood === 'distressed' ? '#e11d48' : mood === 'cheering' ? '#16a34a' : '#b45309';
+  ctx.lineWidth = 1.25;
+
+  ctx.beginPath();
+  ctx.roundRect(boxX, boxY, boxW, boxH, 3.5);
+  ctx.fill();
+  ctx.stroke();
+
+  // Speech pointer triangle pointing straight up at Queen Aurelia
+  ctx.fillStyle = '#fffbeb';
+  ctx.beginPath();
+  ctx.moveTo(115, boxY + 0.6);
+  ctx.lineTo(120, boxY - 4.8);
+  ctx.lineTo(125, boxY + 0.6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(115, boxY);
+  ctx.lineTo(120, boxY - 4.8);
+  ctx.lineTo(125, boxY);
+  ctx.stroke();
+
+  // Royal Wax Seal / Crown Accent on Left
+  ctx.fillStyle = mood === 'distressed' ? '#be123c' : '#9333ea';
+  ctx.beginPath();
+  ctx.arc(boxX + 9, boxY + boxH / 2, 4.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#facc15';
+  ctx.font = 'bold 6px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('♛', boxX + 9, boxY + boxH / 2 + 2.1);
+
+  // Crisp Dark-Burgundy Royal Serif Dialogue Text
+  ctx.font = 'italic bold 5.9px Georgia, "Times New Roman", serif';
+  ctx.fillStyle = '#3b0712';
+  if (lines.length === 1) {
+    ctx.fillText(lines[0], 125, boxY + 9.8);
+  } else if (lines.length === 2) {
+    ctx.fillText(lines[0], 125, boxY + 8.6);
+    ctx.fillText(lines[1], 125, boxY + 16.6);
+  } else {
+    ctx.fillText(lines[0], 125, boxY + 8.2);
+    ctx.fillText(lines[1], 125, boxY + 15.6);
+    ctx.fillText(lines[2], 125, boxY + 23.0);
+  }
+  ctx.textAlign = 'left';
+  ctx.restore();
 }
 
 export interface StoryOverlayPayload {
@@ -2307,18 +3696,209 @@ export interface StoryOverlayPayload {
 }
 
 /**
- * Renders an illustrated retro pixel-parchment Story Cutscene / Mission Briefing modal on the 240x320 playfield.
+ * Renders an Illuminated Royal Vellum & Midnight-Velvet Story Chronicle / Mission Briefing modal.
  */
 export function drawStoryOverlay(
   ctx: CanvasRenderingContext2D,
   payload: StoryOverlayPayload,
   animTick = 0
 ): void {
-  // Dim playfield backdrop while keeping castle visible underneath
+  if (isHDCanvas(ctx)) {
+    ctx.save();
+    // 1. Rich Translucent Castle Backdrop Dimmer
+    ctx.fillStyle = 'rgba(7, 10, 18, 0.78)';
+    ctx.fillRect(2, 22, 236, 296);
+
+    // 2. Midnight Royal Velvet Outer Card with Double Gold Filigree Border
+    const cardGrad = ctx.createLinearGradient(10, 32, 10, 294);
+    cardGrad.addColorStop(0, '#1a1630');
+    cardGrad.addColorStop(0.5, '#131829');
+    cardGrad.addColorStop(1, '#0d111d');
+    ctx.fillStyle = cardGrad;
+    ctx.strokeStyle = payload.mode === 'victory_campaign' ? '#fde047' : '#eab308';
+    ctx.lineWidth = 2.0;
+    ctx.beginPath();
+    ctx.roundRect(10, 32, 220, 262, 5);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(250, 204, 21, 0.42)';
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.roundRect(13, 35, 214, 256, 3.5);
+    ctx.stroke();
+
+    // Ornate Gold Corner Diamonds
+    ctx.fillStyle = '#facc15';
+    for (const [cx, cy] of [
+      [15, 37],
+      [225, 37],
+      [15, 289],
+      [225, 289],
+    ]) {
+      ctx.fillRect(cx - 1.5, cy - 1.5, 3, 3);
+    }
+
+    // 3. Illuminated Royal Crimson & Gold Header Ribbon (y = 36..64)
+    const bannerGrad = ctx.createLinearGradient(14, 36, 226, 64);
+    bannerGrad.addColorStop(0, '#311042');
+    bannerGrad.addColorStop(0.5, '#4c0519');
+    bannerGrad.addColorStop(1, '#311042');
+    ctx.fillStyle = bannerGrad;
+    ctx.fillRect(14, 36, 212, 27);
+    ctx.fillStyle = '#eab308';
+    ctx.fillRect(14, 63, 212, 1.2);
+
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 6.2px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#93c5fd';
+    ctx.fillText(payload.eyebrow, 120, 46.5);
+
+    ctx.font = 'bold 9.2px Georgia, "Times New Roman", serif';
+    ctx.fillStyle = '#fde047';
+    ctx.fillText(payload.title, 120, 58.5);
+
+    // 4. Torchlit HD Character Diorama Stage (y = 68..112)
+    const stageGrad = ctx.createLinearGradient(20, 68, 20, 112);
+    stageGrad.addColorStop(0, '#0f172a');
+    stageGrad.addColorStop(1, '#1e1b38');
+    ctx.fillStyle = stageGrad;
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.roundRect(20, 68, 200, 43, 3);
+    ctx.fill();
+    ctx.stroke();
+
+    const dioramaGlow = ctx.createRadialGradient(120, 90, 4, 120, 90, 65);
+    dioramaGlow.addColorStop(0, 'rgba(251, 191, 36, 0.24)');
+    dioramaGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = dioramaGlow;
+    ctx.fillRect(20, 68, 200, 43);
+
+    if (payload.mode === 'prologue' && payload.slideNumber === 1) {
+      drawGoblin(ctx, 72, 92, { variant: 'goblin_torch', hp: 2, maxHp: 2, walkFrame: Math.floor(animTick / 8) });
+      drawBat(ctx, 120, 84, (Math.floor(animTick / 6) % 5) as BatFrame);
+      drawGoblin(ctx, 168, 92, { variant: 'goblin_dagger', hp: 2, maxHp: 2, walkFrame: Math.floor(animTick / 8) + 1 });
+    } else if (payload.mode === 'prologue' && payload.slideNumber === 2) {
+      drawBlueIronBlock(ctx, 76, 91, animTick, false);
+      drawQueen(ctx, 120, 91, 'praying', animTick);
+      drawBlueIronBlock(ctx, 164, 91, animTick, false);
+    } else if (payload.mode === 'stage_clear' || payload.mode === 'victory_campaign') {
+      drawAdrian(ctx, 100, 92, 'idle1', false, { aimAngle: 0 });
+      drawQueen(ctx, 140, 92, 'cheering', animTick);
+      drawHeart(ctx, 115, 75, true, false);
+    } else {
+      drawAdrian(ctx, 72, 92, 'draw', 'single', { aimAngle: 0 });
+      drawSingleArrow(ctx, 118, 90, Math.PI / 2, false, animTick);
+      drawQueen(ctx, 166, 92, payload.queenMood ?? 'watching', animTick);
+    }
+
+    // 5. Crisp Royal Chronicle Narrative Lines (y = 123..176)
+    ctx.textAlign = 'center';
+    ctx.font = '6.8px Georgia, "Times New Roman", serif';
+    ctx.fillStyle = '#f1f5f9';
+    let lineY = 123;
+    for (const line of payload.lines) {
+      ctx.fillText(line, 120, lineY);
+      lineY += 10.8;
+    }
+
+    // 6. Queen Aurelia's Illuminated Vellum Royal Decree Card + Portrait Medallion!
+    if (payload.queenQuote) {
+      const qLines = wrapDialogueWords(payload.queenQuote, 41).slice(0, 5);
+      const qBoxY = 178;
+      const qBoxH = 54;
+      const vellumGrad = ctx.createLinearGradient(18, qBoxY, 18, qBoxY + qBoxH);
+      vellumGrad.addColorStop(0, '#fffbeb');
+      vellumGrad.addColorStop(0.65, '#fef3c7');
+      vellumGrad.addColorStop(1, '#fde68a');
+      ctx.fillStyle = vellumGrad;
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.roundRect(18, qBoxY, 204, qBoxH, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      // Embedded Circular Royal Portrait Medallion on the Left (cx = 36, cy = qBoxY + 27)
+      const medX = 36;
+      const medY = qBoxY + 27;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(medX, medY, 13.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#2e1065';
+      ctx.fill();
+      ctx.clip();
+      drawHDQueenFigure(
+        ctx,
+        medX,
+        medY + 4,
+        payload.mode === 'stage_clear' || payload.mode === 'victory_campaign'
+          ? 'cheering'
+          : payload.queenMood ?? 'watching',
+        animTick,
+        1.05
+      );
+      ctx.restore();
+
+      ctx.strokeStyle = '#b45309';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(medX, medY, 13.5, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Queen Title & Realistic Spoken Dialogue on Vellum
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 5.7px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = '#9f1239';
+      ctx.fillText('♛ QUEEN AURELIA OF ELDORIA', 54, qBoxY + 9.8);
+
+      ctx.font = 'italic bold 5.8px Georgia, "Times New Roman", serif';
+      ctx.fillStyle = '#3b0712';
+      const stepY = qLines.length >= 5 ? 7.6 : 8.2;
+      qLines.forEach((ql, idx) => {
+        ctx.fillText(ql, 54, qBoxY + 19.2 + idx * stepY);
+      });
+    }
+
+    // 7. Tactical Ranger Controls & Intel Banner
+    if (payload.hint) {
+      const hLines = wrapDialogueWords(payload.hint, 40).slice(0, 2);
+      ctx.fillStyle = '#0f2438';
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.roundRect(18, 236, 204, 25, 3);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 6.0px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = '#bae6fd';
+      if (hLines.length === 1) {
+        ctx.fillText(hLines[0], 120, 250.5);
+      } else {
+        ctx.fillText(hLines[0], 120, 246);
+        ctx.fillText(hLines[1], 120, 255.5);
+      }
+    }
+
+    // 8. Pulsing Golden Action Prompt
+    const blink = Math.floor(animTick / 18) % 2 === 0;
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 7.4px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = blink ? '#fde047' : '#ffffff';
+    ctx.fillText(payload.promptText, 120, 279);
+    ctx.textAlign = 'left';
+    ctx.restore();
+    return;
+  }
+
+  // Fallback software-canvas Story Overlay for Node unit tests
   ctx.fillStyle = 'rgba(8, 10, 16, 0.84)';
   ctx.fillRect(2, 22, 236, 296);
 
-  // Outer Royal Gold & Dark Parchment Frame (x = 12..228, y = 40..284)
   ctx.fillStyle = '#141824';
   ctx.fillRect(12, 40, 216, 244);
   ctx.strokeStyle = payload.mode === 'victory_campaign' ? '#fde047' : '#e2b43b';
@@ -2329,7 +3909,6 @@ export function drawStoryOverlay(
   ctx.lineWidth = 1;
   ctx.strokeRect(15, 43, 210, 238);
 
-  // Top Banner Strip
   ctx.fillStyle = '#1e2638';
   ctx.fillRect(16, 44, 208, 22);
   ctx.fillStyle = '#e2b43b';
@@ -2344,35 +3923,29 @@ export function drawStoryOverlay(
   ctx.fillStyle = '#facc15';
   ctx.fillText(payload.title, 120, 63);
 
-  // Illustrated Character Vignette Row (y = 72..112)
   ctx.fillStyle = '#10141f';
   ctx.fillRect(22, 72, 196, 38);
   ctx.strokeStyle = '#2d3548';
   ctx.strokeRect(22, 72, 196, 38);
 
   if (payload.mode === 'prologue' && payload.slideNumber === 1) {
-    // Slide 1: Ironfang Horde storming the castle
     drawGoblin(ctx, 74, 92, { variant: 'goblin_torch', hp: 2, maxHp: 2, walkFrame: Math.floor(animTick / 8) });
     drawBat(ctx, 120, 86, (Math.floor(animTick / 6) % 5) as BatFrame);
     drawGoblin(ctx, 166, 92, { variant: 'goblin_dagger', hp: 2, maxHp: 2, walkFrame: Math.floor(animTick / 8) + 1 });
   } else if (payload.mode === 'prologue' && payload.slideNumber === 2) {
-    // Slide 2: Queen Aurelia imprisoned behind Iron Bars
     drawBlueIronBlock(ctx, 78, 91, animTick, false);
     drawQueen(ctx, 120, 91, 'praying', animTick);
     drawBlueIronBlock(ctx, 162, 91, animTick, false);
   } else if (payload.mode === 'stage_clear' || payload.mode === 'victory_campaign') {
-    // Reunion: Adrian & Queen Aurelia together!
     drawAdrian(ctx, 102, 92, 'idle1', false);
     drawQueen(ctx, 138, 92, 'cheering', animTick);
     drawHeart(ctx, 115, 76, true, false);
   } else {
-    // Briefing / Prologue Slide 3: Adrian aiming toward the High Keep Queen
     drawAdrian(ctx, 76, 92, 'draw', 'single');
     drawSingleArrow(ctx, 118, 90, Math.PI / 2, false, animTick);
     drawQueen(ctx, 164, 92, payload.queenMood ?? 'watching', animTick);
   }
 
-  // Story Narrative Lines (y = 122..192)
   ctx.font = '7px monospace';
   ctx.fillStyle = '#e2e8f0';
   let lineY = 123;
@@ -2381,27 +3954,8 @@ export function drawStoryOverlay(
     lineY += 11;
   }
 
-  const wrapWords = (text: string, maxLen: number): string[] => {
-    const words = text.trim().split(/\s+/);
-    const out: string[] = [];
-    let cur = '';
-    for (const w of words) {
-      if (!cur) {
-        cur = w;
-      } else if (cur.length + 1 + w.length <= maxLen) {
-        cur += ` ${w}`;
-      } else {
-        out.push(cur);
-        cur = w;
-      }
-    }
-    if (cur) out.push(cur);
-    return out;
-  };
-
-  // Queen Aurelia's Royal Message Box
   if (payload.queenQuote) {
-    const qLines = wrapWords(payload.queenQuote, 40).slice(0, 3);
+    const qLines = wrapDialogueWords(payload.queenQuote, 40).slice(0, 3);
     ctx.fillStyle = '#1f1630';
     ctx.fillRect(19, 186, 202, 37);
     ctx.strokeStyle = '#a855f7';
@@ -2416,9 +3970,8 @@ export function drawStoryOverlay(
     });
   }
 
-  // Tactical Intel Strip
   if (payload.hint) {
-    const hLines = wrapWords(payload.hint, 40).slice(0, 2);
+    const hLines = wrapDialogueWords(payload.hint, 40).slice(0, 2);
     ctx.fillStyle = '#132436';
     ctx.fillRect(19, 227, 202, 26);
     ctx.strokeStyle = '#38bdf8';
@@ -2433,7 +3986,6 @@ export function drawStoryOverlay(
     }
   }
 
-  // Pulsing Continue Prompt
   const blink = Math.floor(animTick / 18) % 2 === 0;
   ctx.font = 'bold 7.5px monospace';
   ctx.fillStyle = blink ? '#facc15' : '#ffffff';
@@ -2547,26 +4099,27 @@ export function drawArrow(
 
 export function drawHUD(ctx: CanvasRenderingContext2D, state: SpriteHUDState & { remainingRaiders?: number; sanctumUnlocked?: boolean }): void {
   const pal = resolveTerrainPalette(state.stage);
+  const hd = isHDCanvas(ctx);
 
   // 1. Top Header Bar Backdrop (x = 2..238, y = 2..22)
-  ctx.fillStyle = pal.headerBg;
+  ctx.fillStyle = hd ? '#0d1322' : pal.headerBg;
   ctx.fillRect(2, 2, 236, 20);
   ctx.fillStyle = pal.headerBorder;
-  ctx.fillRect(2, 21, 236, 1);
+  ctx.fillRect(2, 21, 236, 1.2);
 
   // 2. Score & Stage Text
-  ctx.font = 'bold 8px monospace';
+  ctx.font = hd ? 'bold 7.6px system-ui, -apple-system, sans-serif' : 'bold 8px monospace';
   ctx.textAlign = 'left';
   ctx.fillStyle = '#f8fafc';
   const scoreStr = String(Math.max(0, state.score)).padStart(5, '0');
-  ctx.fillText(`SCR:${scoreStr}`, 6, 10);
+  ctx.fillText(`SCR:${scoreStr}`, 6, 10.2);
 
   ctx.fillStyle = '#facc15';
   const stageStr = String(Math.max(1, state.stage)).padStart(2, '0');
-  ctx.fillText(`LV${stageStr}`, 66, 10);
+  ctx.fillText(`LV${stageStr}`, 64, 10.2);
 
   // 3. Weapon Variation & Mission Objective Indicator on sub-row (y = 19)
-  ctx.font = '7px monospace';
+  ctx.font = hd ? 'bold 6.8px system-ui, -apple-system, sans-serif' : '7px monospace';
   const wLabel =
     state.activeWeapon === 'single'
       ? '1:SINGLE(∞)'
@@ -2578,15 +4131,15 @@ export function drawHUD(ctx: CanvasRenderingContext2D, state: SpriteHUDState & {
       ? '#fb923c'
       : state.activeWeapon === 'double'
       ? '#fde047'
-      : '#70c4ff';
+      : '#7dd3fc';
   ctx.fillText(wLabel, 6, 19);
 
   if (state.sanctumUnlocked) {
     ctx.fillStyle = '#4ade80';
-    ctx.fillText('▲ REACH QUEEN!', 96, 19);
+    ctx.fillText('▲ ENTER SANCTUM!', 92, 19);
   } else if (typeof state.remainingRaiders === 'number') {
-    ctx.fillStyle = '#cbd5e1';
-    ctx.fillText(`FOES:${state.remainingRaiders}`, 102, 19);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillText(`GUARDS:${state.remainingRaiders}`, 98, 19);
   }
 
   // 4. Sanctuary Hearts Row (Top-Right: x = 176..234, y = 6)

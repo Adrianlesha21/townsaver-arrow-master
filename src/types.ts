@@ -47,11 +47,10 @@ export const SANCTUARY_THRESHOLD_Y = 264;
 export const PLAYFIELD_TOP_Y = 22;
 export const TOP_SANCTUM_GATE_Y = 56;
 
+export type CardinalDirection = 'up' | 'down' | 'left' | 'right';
+
 export type FacingDirection =
-  | 'up'
-  | 'down'
-  | 'left'
-  | 'right'
+  | CardinalDirection
   | 'up-left'
   | 'up-right'
   | 'down-left'
@@ -98,6 +97,7 @@ export interface StoryChapter {
   briefingLines: string[];
   tacticalHint: string;
   queenPlea: string;
+  queenCastleCallout?: string;
   reunionQuote: string;
 }
 
@@ -113,6 +113,7 @@ export interface SanctumState {
   gateWidth: number;
   unlocked: boolean;
   rescued: boolean;
+  portcullisProgress?: number;
 }
 
 /**
@@ -351,6 +352,8 @@ export interface GameState {
   heartFlashTimer: number;
   statusBanner: string | null;
   bannerTimer: number;
+  queenCalloutText?: string | null;
+  queenCalloutTimer?: number;
   lastFailReason: FailReason;
   stageClearTimer: number;
   breachResetTimer: number;

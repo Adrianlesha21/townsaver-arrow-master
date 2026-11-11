@@ -84,7 +84,8 @@ describe('Townsaver v2.0 — Arrow Master Overhaul (2D Movement, Mazes, Top Sanc
     const afterDiag = engine.getState();
     expect(afterDiag.adrianX).toBeLessThan(startX);
     expect(afterDiag.adrianY).toBeLessThan(startY);
-    expect(afterDiag.adrianFacingDir).toBe('up-left');
+    // Diagonal movement preserves 8-way motion while snapping bow cleanly to cardinal 'up'
+    expect(afterDiag.adrianFacingDir).toBe('up');
 
     // Place Adrian directly below Stage 1's intact Wood Palisade at (30, 212) and try walking up through it
     const pal = engine.getState().targets.find((t) => t.id === 's1_pal_c0')!;
@@ -116,7 +117,7 @@ describe('Townsaver v2.0 — Arrow Master Overhaul (2D Movement, Mazes, Top Sanc
     expect(engine.getState().adrianX).toBeLessThanOrEqual(iron.x - 15);
   });
 
-  it('supports 8-way directional firing and 360-degree Mouse-Cursor aiming', () => {
+  it('couples WASD / Arrow movement to strict 4-Way Cardinal Aiming (Up, Down, Left, Right) without mouse aiming', () => {
     const engine = new GameEngine({
       storage: new MemoryStorage(),
       initialStage: 1,
@@ -125,28 +126,39 @@ describe('Townsaver v2.0 — Arrow Master Overhaul (2D Movement, Mazes, Top Sanc
     });
 
     engine.setPosition(120, 240);
+    expect(engine.getState().useMouseAim).toBe(false);
+    // Live Queen Aurelia Castle Entry Callout is active upon entering the castle ward
+    expect(engine.getState().queenCalloutText).toBeTruthy();
 
-    // 1. Horizontal right shot via 8-way aim
-    engine.setAimDirection(1, 0);
+    // 1. Horizontal right shot via cardinal aim
+    engine.setCardinalAim('right');
     const rightArrows = engine.fireWeapon('single');
     expect(rightArrows.length).toBe(1);
     expect(rightArrows[0].vx).toBeGreaterThan(250);
     expect(Math.abs(rightArrows[0].vy)).toBeLessThan(0.1);
     expect(engine.getState().adrianFacingDir).toBe('right');
-
-    // Clear arrow
     engine.getState().arrows.length = 0;
 
-    // 2. Arbitrary 360° mouse cursor aim toward top-right target (190, 120)
-    engine.setAimCursor(190, 120);
-    expect(engine.getState().useMouseAim).toBe(true);
-    const mouseArrows = engine.fireWeapon('double');
-    expect(mouseArrows.length).toBe(2);
-    expect(mouseArrows[0].vx).toBeGreaterThan(100);
-    expect(mouseArrows[0].vy).toBeLessThan(-150);
+    // 2. Downward cardinal shot
+    engine.setCardinalAim('down');
+    const downArrows = engine.fireWeapon('single');
+    expect(downArrows.length).toBe(1);
+    expect(downArrows[0].vy).toBeGreaterThan(250);
+    expect(Math.abs(downArrows[0].vx)).toBeLessThan(0.1);
+    expect(engine.getState().adrianFacingDir).toBe('down');
+    engine.getState().arrows.length = 0;
+
+    // 3. Diagonal movement with preferred last-pressed cardinal ('left' vs 'up')
+    engine.setMoveInput(-1, -1, 'left');
+    expect(engine.getState().adrianFacingDir).toBe('left');
+    const leftArrows = engine.fireWeapon('double');
+    expect(leftArrows.length).toBe(2);
+    expect(leftArrows[0].vx).toBeLessThan(-250);
+    expect(Math.abs(leftArrows[0].vy)).toBeLessThan(0.1);
+    expect(engine.getState().useMouseAim).toBe(false);
   });
 
-  it('locks Top Sanctum Portcullis until all Raiders fall, then requires walking up to Queen Aurelia to clear the stage', () => {
+  it('locks Top Sanctum Portcullis until all Raiders fall, animates rising portcullis, and requires walking up to Queen Aurelia to clear the stage', () => {
     const sound = new SoundSystem();
     const engine = new GameEngine({
       sound,
@@ -157,6 +169,7 @@ describe('Townsaver v2.0 — Arrow Master Overhaul (2D Movement, Mazes, Top Sanc
     });
 
     expect(engine.getState().sanctum.unlocked).toBe(false);
+    expect(engine.getState().sanctum.portcullisProgress).toBe(0);
     expect(engine.getState().sanctum.queenX).toBe(QUEEN_TOP_SANCTUM_X);
     expect(engine.getState().sanctum.queenY).toBe(QUEEN_TOP_SANCTUM_Y);
 
@@ -175,6 +188,9 @@ describe('Townsaver v2.0 — Arrow Master Overhaul (2D Movement, Mazes, Top Sanc
     const unlockedState = engine.getState();
     expect(unlockedState.sanctum.unlocked).toBe(true);
     expect(unlockedState.remainingRaiders).toBe(0);
+    // Step 30 frames to verify smooth rising Portcullis animation (portcullisProgress -> 1)
+    engine.stepFrames(35);
+    expect(engine.getState().sanctum.portcullisProgress).toBeGreaterThan(0.95);
     // Still 'playing' because Adrian has not walked up to Queen Aurelia yet!
     expect(unlockedState.status).toBe('playing');
     expect(sound.soundHistory).toContain('sanctum_unlock');

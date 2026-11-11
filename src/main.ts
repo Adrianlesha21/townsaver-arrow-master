@@ -1,7 +1,6 @@
 /**
- * Townsaver: The Arrow Master — v2.0 2D Tactical Castle Assault & Story Campaign Controller
- * Connects the 60 FPS GameEngine (8-way 2D movement, 360°/8-way aiming, Goblin AI, Crate Pickups,
- * Top Royal Sanctum Queen Rescue, and 15-Chapter Story Mode) to the Desktop Chrome CRT Cabinet.
+ * Townsaver: The Arrow Master — v2.1 HD Torchlit Castle, Movement-Coupled 4-Way Cardinal Aiming
+ * & Royal Sanctum Story Campaign Controller
  */
 
 import {
@@ -17,6 +16,7 @@ import {
   drawPickupItem,
   drawQueen,
   drawQueenPortrait,
+  drawQueenSpeechBubble,
   drawStoryOverlay,
   drawTarget,
   getTerrainPaletteName,
@@ -30,7 +30,9 @@ import {
 import { SoundSystem, SoundTriggerEffect } from './audio';
 import { GameEngine, LOGICAL_HEIGHT, LOGICAL_WIDTH } from './engine';
 import { PROLOGUE_SLIDES, STAGE_NAMES } from './stages';
-import { FailReason, GameState, GameStatus } from './types';
+import { CardinalDirection, FailReason, GameState, GameStatus } from './types';
+
+export const RENDER_SCALE = 4;
 
 export interface TownsaverDevHook {
   version: string;
@@ -39,6 +41,7 @@ export interface TownsaverDevHook {
   contextAcquired: boolean;
   width: number;
   height: number;
+  renderScale: number;
   fps: number;
   frameCount: number;
   activeWeapon: WeaponType;
@@ -111,8 +114,9 @@ let qCtx: CanvasRenderingContext2D | null = null;
 const sound = new SoundSystem();
 const engine = new GameEngine({ sound, initialStage: 1, storyMode: true });
 
-// Live Keyboard Movement Tracking
+// Live Keyboard Movement & Cardinal Aim Priority Stack (no mouse aiming!)
 const pressedKeys = new Set<string>();
+const cardinalKeyStack: CardinalDirection[] = [];
 
 // Application & Bezel State
 let frameCount = 0;
@@ -133,10 +137,10 @@ let adrianCol = 2;
 let terrainPalette: TerrainPalette = 'meadow';
 
 const QUEEN_MOOD_DESCRIPTIONS: Record<QueenMood, string> = {
-  watching: 'Calls out to Adrian from the locked Top Sanctum.',
-  cheering: 'Waves from the Top Sanctum — ascend to rescue her!',
-  praying: 'Clasps hands in urgent prayer — only 1 Heart left!',
-  distressed: 'Cries out in alarm as Adrian takes a hit!',
+  watching: 'Calls down counsel to Adrian from the Royal Sanctum.',
+  cheering: 'The Portcullis rises! Walk north into the Sanctum!',
+  praying: 'Whispers a fervent royal prayer — guard your last Heart!',
+  distressed: 'Cries out from the balcony as enemy steel strikes!',
 };
 
 function initCanvas(): boolean {
@@ -146,8 +150,8 @@ function initCanvas(): boolean {
     return false;
   }
   canvas = el;
-  canvas.width = LOGICAL_WIDTH;
-  canvas.height = LOGICAL_HEIGHT;
+  canvas.width = LOGICAL_WIDTH * RENDER_SCALE;
+  canvas.height = LOGICAL_HEIGHT * RENDER_SCALE;
 
   const context = canvas.getContext('2d', { alpha: false });
   if (!context) {
@@ -156,10 +160,10 @@ function initCanvas(): boolean {
   }
   ctx = context;
 
-  ctx.imageSmoothingEnabled = false;
-  const ctxAny = ctx as unknown as Record<string, boolean>;
-  if ('webkitImageSmoothingEnabled' in ctxAny) ctxAny.webkitImageSmoothingEnabled = false;
-  if ('mozImageSmoothingEnabled' in ctxAny) ctxAny.mozImageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = true;
+  if ('imageSmoothingQuality' in ctx) {
+    ctx.imageSmoothingQuality = 'high';
+  }
 
   return true;
 }
@@ -167,9 +171,14 @@ function initCanvas(): boolean {
 function initQueenPortrait(): void {
   qCanvas = document.getElementById('queen-portrait-canvas') as HTMLCanvasElement | null;
   if (!qCanvas) return;
+  qCanvas.width = 144;
+  qCanvas.height = 192;
   qCtx = qCanvas.getContext('2d');
   if (!qCtx) return;
-  qCtx.imageSmoothingEnabled = false;
+  qCtx.imageSmoothingEnabled = true;
+  if ('imageSmoothingQuality' in qCtx) {
+    qCtx.imageSmoothingQuality = 'high';
+  }
   drawQueenPortrait(qCtx, queenMood, frameCount);
 }
 
@@ -204,7 +213,7 @@ function syncBezelDOM(): void {
   const hvyVal = document.querySelector('#ammo-heavy .ammo-val');
   if (hvyVal) hvyVal.textContent = String(st.heavyAmmo);
 
-  // 2. Queen mood panel & portrait
+  // 2. Queen mood panel & HD portrait
   const titleEl = document.getElementById('queen-mood-title');
   const descEl = document.getElementById('queen-mood-desc');
   if (titleEl) {
@@ -213,7 +222,7 @@ function syncBezelDOM(): void {
   }
   if (descEl) {
     descEl.textContent = st.sanctum.unlocked
-      ? 'Portcullis OPEN! Walk up to the Top Sanctum to rescue her!'
+      ? 'Portcullis OPEN! Walk north into the Royal Sanctum!'
       : QUEEN_MOOD_DESCRIPTIONS[queenMood];
   }
   if (qCtx) {
@@ -248,15 +257,15 @@ function syncBezelDOM(): void {
   if (chapEl) chapEl.textContent = st.story.chapterTitle;
   if (objEl) {
     if (st.sanctum.unlocked) {
-      objEl.textContent = '🔓 GATE OPEN! WALK UP TO THE QUEEN!';
+      objEl.textContent = '🔓 PORTCULLIS OPEN! ENTER SANCTUM!';
       objEl.classList.add('unlocked');
     } else {
-      objEl.textContent = `⚔ DEFEAT ${st.remainingRaiders} RAIDER${st.remainingRaiders === 1 ? '' : 'S'} TO UNLOCK GATE`;
+      objEl.textContent = `⚔ DEFEAT ${st.remainingRaiders} GUARD${st.remainingRaiders === 1 ? '' : 'S'} TO RAISE GATE`;
       objEl.classList.remove('unlocked');
     }
   }
   if (loreEl) {
-    loreEl.textContent = `${st.story.briefingLines.join(' ')} ${st.story.queenPlea}`;
+    loreEl.textContent = st.story.queenPlea;
   }
 
   // 5. Score & High Score
@@ -293,47 +302,40 @@ function syncBezelDOM(): void {
     if (st.statusBanner) {
       footerMsg.textContent = st.statusBanner.toUpperCase();
     } else if (st.sanctum.unlocked) {
-      footerMsg.textContent = 'TOP SANCTUM GATE UNLOCKED! WALK UP TO RESCUE QUEEN AURELIA!';
+      footerMsg.textContent = 'SANCTUM PORTCULLIS OPEN! WALK UP (W / ▲) TO QUEEN AURELIA!';
     } else {
       footerMsg.textContent =
-        'MOVE: [WASD/ARROWS] • AIM & SHOOT: [MOUSE CLICK / SPACE] • RESCUE QUEEN AT TOP!';
+        'MOVE & AIM (▲▼◀▶): [WASD / ARROWS] • FIRE BOW: [SPACE / ENTER / F]';
     }
   }
+}
+
+function keyCodeToCardinal(code: string): CardinalDirection | null {
+  if (code === 'KeyW' || code === 'ArrowUp' || code === 'Numpad8') return 'up';
+  if (code === 'KeyS' || code === 'ArrowDown' || code === 'Numpad2') return 'down';
+  if (code === 'KeyA' || code === 'ArrowLeft' || code === 'Numpad4') return 'left';
+  if (code === 'KeyD' || code === 'ArrowRight' || code === 'Numpad6') return 'right';
+  return null;
+}
+
+function isDirectionHeld(dir: CardinalDirection): boolean {
+  if (dir === 'up') return pressedKeys.has('KeyW') || pressedKeys.has('ArrowUp') || pressedKeys.has('Numpad8');
+  if (dir === 'down') return pressedKeys.has('KeyS') || pressedKeys.has('ArrowDown') || pressedKeys.has('Numpad2');
+  if (dir === 'left') return pressedKeys.has('KeyA') || pressedKeys.has('ArrowLeft') || pressedKeys.has('Numpad4');
+  return pressedKeys.has('KeyD') || pressedKeys.has('ArrowRight') || pressedKeys.has('Numpad6');
 }
 
 function updateMovementVectorFromKeys(): void {
   let dx = 0;
   let dy = 0;
-  if (pressedKeys.has('KeyA') || pressedKeys.has('ArrowLeft') || pressedKeys.has('Numpad4')) {
-    dx -= 1;
-  }
-  if (pressedKeys.has('KeyD') || pressedKeys.has('ArrowRight') || pressedKeys.has('Numpad6')) {
-    dx += 1;
-  }
-  if (pressedKeys.has('KeyW') || pressedKeys.has('ArrowUp') || pressedKeys.has('Numpad8')) {
-    dy -= 1;
-  }
-  if (pressedKeys.has('KeyS') || pressedKeys.has('ArrowDown') || pressedKeys.has('Numpad2')) {
-    dy += 1;
-  }
-  engine.setMoveInput(dx, dy);
-}
+  if (isDirectionHeld('left')) dx -= 1;
+  if (isDirectionHeld('right')) dx += 1;
+  if (isDirectionHeld('up')) dy -= 1;
+  if (isDirectionHeld('down')) dy += 1;
 
-function isMovementKey(code: string): boolean {
-  return (
-    code === 'KeyW' ||
-    code === 'KeyA' ||
-    code === 'KeyS' ||
-    code === 'KeyD' ||
-    code === 'ArrowUp' ||
-    code === 'ArrowDown' ||
-    code === 'ArrowLeft' ||
-    code === 'ArrowRight' ||
-    code === 'Numpad8' ||
-    code === 'Numpad2' ||
-    code === 'Numpad4' ||
-    code === 'Numpad6'
-  );
+  const preferredCardinal =
+    cardinalKeyStack.length > 0 ? cardinalKeyStack[cardinalKeyStack.length - 1] : undefined;
+  engine.setMoveInput(dx, dy, preferredCardinal);
 }
 
 function handleFireOrAdvance(): void {
@@ -361,14 +363,21 @@ function handleFireOrAdvance(): void {
 
 function setupInputListeners(): void {
   window.addEventListener('keydown', (e: KeyboardEvent) => {
-    // Allow stage dropdown navigation if focused, unless game key
-    if (isMovementKey(e.code)) {
+    const dir = keyCodeToCardinal(e.code);
+    if (dir !== null) {
       e.preventDefault();
+      const wasNewPress = !pressedKeys.has(e.code);
       pressedKeys.add(e.code);
+      if (wasNewPress) {
+        const existingIdx = cardinalKeyStack.indexOf(dir);
+        if (existingIdx !== -1) cardinalKeyStack.splice(existingIdx, 1);
+        cardinalKeyStack.push(dir);
+        // Immediately snap Adrian's bow to the newly pressed cardinal direction!
+        engine.setCardinalAim(dir);
+      }
       lastKeyPressed = `MOVE(${e.code})`;
       const st = engine.getState();
       if (st.status === 'briefing') {
-        // Pressing a movement key on the briefing starts the mission right away!
         engine.advanceStory();
       }
       updateMovementVectorFromKeys();
@@ -405,6 +414,9 @@ function setupInputListeners(): void {
     } else if (
       e.code === 'Space' ||
       e.code === 'Enter' ||
+      e.code === 'KeyF' ||
+      e.code === 'KeyJ' ||
+      e.code === 'KeyZ' ||
       e.code === 'Digit5' ||
       e.code === 'Numpad5' ||
       e.code === 'KeyE'
@@ -420,56 +432,28 @@ function setupInputListeners(): void {
   window.addEventListener('keyup', (e: KeyboardEvent) => {
     if (pressedKeys.has(e.code)) {
       pressedKeys.delete(e.code);
+      const dir = keyCodeToCardinal(e.code);
+      if (dir !== null && !isDirectionHeld(dir)) {
+        const idx = cardinalKeyStack.indexOf(dir);
+        if (idx !== -1) cardinalKeyStack.splice(idx, 1);
+      }
+      if (cardinalKeyStack.length > 0) {
+        engine.setCardinalAim(cardinalKeyStack[cardinalKeyStack.length - 1]);
+      }
       updateMovementVectorFromKeys();
     }
   });
 
   window.addEventListener('blur', () => {
     pressedKeys.clear();
+    cardinalKeyStack.length = 0;
     engine.setMoveInput(0, 0);
   });
 
-  // Smooth 360° Mouse Aiming across the 240x320 Playfield
-  canvas.addEventListener('pointermove', (e: PointerEvent) => {
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const cx = (e.clientX - rect.left) * scaleX;
-    const cy = (e.clientY - rect.top) * scaleY;
-    engine.setAimCursor(cx, cy);
-  });
-
-  // Left-Click to Advance Story Overlay OR Aim 360° & Fire Immediately!
-  canvas.addEventListener('pointerdown', (e: PointerEvent) => {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const clickX = (e.clientX - rect.left) * scaleX;
-    const clickY = (e.clientY - rect.top) * scaleY;
-    lastKeyPressed = `CLICK(${Math.round(clickX)},${Math.round(clickY)})`;
-
-    const st = engine.getState();
-    if (
-      st.status === 'prologue' ||
-      st.status === 'briefing' ||
-      st.status === 'title' ||
-      st.status === 'stage_clear' ||
-      st.status === 'victory_campaign'
-    ) {
-      engine.advanceStory();
-      syncFromEngine();
-      syncBezelDOM();
-      if (ctx) renderPlayfield();
-      updateDevHook();
-      return;
-    }
-
-    engine.setAimCursor(clickX, clickY);
-    engine.fireWeapon(activeWeapon);
-    syncFromEngine();
-    syncBezelDOM();
-    updateDevHook();
+  // Left-Click on canvas advances story overlays or fires straight in Adrian's current cardinal facing (NO mouse aiming!)
+  canvas.addEventListener('pointerdown', () => {
+    lastKeyPressed = 'CLICK_ADVANCE_OR_FIRE';
+    handleFireOrAdvance();
   });
 }
 
@@ -653,20 +637,30 @@ function fireShowcaseArrow(weaponOverride?: WeaponType): void {
 }
 
 // ============================================================================
-// 240x320 PLAYFIELD RENDER PIPELINE
+// 960x1280 (4x NATIVE HiDPI) PLAYFIELD RENDER PIPELINE
 // ============================================================================
 
 function renderPlayfield(): void {
   const st = engine.getState();
   const shaking = st.screenShakeTimer > 0 && !isPaused;
 
+  ctx.save();
+  ctx.scale(RENDER_SCALE, RENDER_SCALE);
+
   if (shaking) {
     ctx.save();
     ctx.translate(st.screenShakeOffsetX, st.screenShakeOffsetY);
   }
 
-  // 1. Castle Backdrop, Top Royal Sanctum Alcove & Portcullis Gate, and Entrance Gate
-  drawBackdrop(ctx, terrainPalette, frameCount, adrianCol, st.sanctum.unlocked);
+  // 1. Rich Torchlit HD Castle Backdrop, Top Royal Sanctum Alcove & Rising Portcullis Gate
+  drawBackdrop(
+    ctx,
+    terrainPalette,
+    frameCount,
+    adrianCol,
+    st.sanctum.unlocked,
+    st.sanctum.portcullisProgress
+  );
 
   // 2. Queen Aurelia waiting inside the Top Royal Sanctum Alcove (x = 120, y = 38)
   drawQueen(ctx, st.sanctum.queenX, st.sanctum.queenY, queenMood, frameCount);
@@ -752,7 +746,7 @@ function renderPlayfield(): void {
     drawEnemyProjectile(ctx, eproj, frameCount);
   }
 
-  // 8. In-Flight Player Arrows (8-way & 360° rotated)
+  // 8. In-Flight Player Arrows (4-Way Cardinal & Spread Arrows)
   for (const arr of st.arrows) {
     drawArrow(
       ctx,
@@ -781,7 +775,7 @@ function renderPlayfield(): void {
     drawParticle(ctx, p);
   }
 
-  // 10. Adrian (The Arrow Master) with 2D Free-Roam Walk, Directional Flip & Aim Reticle!
+  // 10. Adrian (The Arrow Master) with 4-Pose HD Directional Art & Golden Cardinal Chevron!
   const flashActive = st.muzzleFlashTimer > 0;
   const flashWeapon = st.muzzleFlashWeapon !== 'none' ? st.muzzleFlashWeapon : activeWeapon;
   drawAdrian(
@@ -796,12 +790,12 @@ function renderPlayfield(): void {
       walkTick: st.adrianWalkTick,
       invulnerable: st.adrianInvulnTimer > 0,
       showAimReticle: st.status === 'playing',
-      cursorX: st.useMouseAim ? st.aimCursorX : null,
-      cursorY: st.useMouseAim ? st.aimCursorY : null,
+      cursorX: null,
+      cursorY: null,
     }
   );
 
-  // 11. Top Header Bar HUD (Score, Stage, Weapon, Remaining Foes / Unlock Status, Hearts)
+  // 11. Top Header Bar HUD (Score, Stage, Weapon, Remaining Guards / Unlock Status, Hearts)
   drawHUD(ctx, {
     score: st.score,
     highScore: st.highScore,
@@ -818,14 +812,19 @@ function renderPlayfield(): void {
     sanctumUnlocked: st.sanctum.unlocked,
   });
 
-  // Live On-Screen Floating Callout Banner during active play
-  if (st.status === 'playing' && st.statusBanner) {
-    ctx.fillStyle = 'rgba(12, 18, 28, 0.86)';
-    ctx.fillRect(14, 24, 212, 13);
-    ctx.fillStyle = st.sanctum.unlocked ? '#4ade80' : '#fde047';
-    ctx.font = 'bold 6.5px monospace';
+  // Live In-Castle Queen Aurelia Parchment Speech Bubble or Tactical Status Banner
+  if (st.status === 'playing' && st.queenCalloutText) {
+    drawQueenSpeechBubble(ctx, st.queenCalloutText, queenMood, frameCount);
+  } else if (st.status === 'playing' && st.statusBanner) {
+    ctx.fillStyle = 'rgba(12, 18, 30, 0.90)';
+    ctx.fillRect(14, 24, 212, 13.5);
+    ctx.strokeStyle = st.sanctum.unlocked ? '#4ade80' : '#eab308';
+    ctx.lineWidth = 0.9;
+    ctx.strokeRect(14, 24, 212, 13.5);
+    ctx.fillStyle = st.sanctum.unlocked ? '#86efac' : '#fde047';
+    ctx.font = 'bold 6.4px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(st.statusBanner.slice(0, 34), 120, 33);
+    ctx.fillText(st.statusBanner.slice(0, 36), 120, 33);
     ctx.textAlign = 'left';
   }
 
@@ -833,7 +832,7 @@ function renderPlayfield(): void {
     ctx.restore();
   }
 
-  // 12. Interactive Story Overlays & Status Modals
+  // 12. Illuminated Royal Vellum Story Overlays & Status Modals
   if (st.status === 'prologue') {
     const slide = PROLOGUE_SLIDES[st.prologueIndex] ?? PROLOGUE_SLIDES[0];
     drawStoryOverlay(
@@ -847,16 +846,16 @@ function renderPlayfield(): void {
         lines: slide.lines,
         queenQuote:
           slide.slideNumber === 2
-            ? '"Adrian! Only you can break the Ironfang siege and free Eldoria!"'
+            ? '"Adrian! By the Crown of Eldoria, shatter their iron siege and ascend unto my Sanctum!"'
             : undefined,
         hint:
           slide.slideNumber === 3
-            ? 'WASD/ARROWS: Move 8-Way • MOUSE/SPACE: Aim & Shoot!'
-            : 'STORY CAMPAIGN • CASTLE ELDORIA',
+            ? 'MOVE & AIM: [WASD] OR [ARROW KEYS] (▲▼◀▶) • FIRE: [SPACE]!'
+            : 'ROYAL CHRONICLE • CASTLE ELDORIA',
         promptText:
           slide.slideNumber < slide.totalSlides
-            ? '▶ PRESS [SPACE] OR CLICK FOR NEXT'
-            : '▶ PRESS [SPACE] OR CLICK TO BEGIN',
+            ? '▶ PRESS [SPACE] OR [ENTER] FOR NEXT'
+            : '▶ PRESS [SPACE] OR [ENTER] TO BEGIN',
       },
       frameCount
     );
@@ -871,7 +870,7 @@ function renderPlayfield(): void {
         queenQuote: st.story.queenPlea,
         hint: st.story.tacticalHint,
         queenMood: st.queenMood,
-        promptText: '▶ [SPACE] / [WASD] / CLICK TO DEPLOY',
+        promptText: '▶ PRESS [SPACE] OR [WASD / ARROWS] TO ENTER',
       },
       frameCount
     );
@@ -883,16 +882,16 @@ function renderPlayfield(): void {
         eyebrow: `SANCTUM RECLAIMED • STAGE ${st.stage} CLEAR!`,
         title: 'QUEEN AURELIA RESCUED!',
         lines: [
-          'Adrian ascends the Royal Sanctum steps',
-          'and breaks the iron seal! Before they',
-          'can rest, fleeing captains pull Aurelia',
-          'toward the next higher castle floor!',
+          'Adrian ascends the sunlit Sanctum steps',
+          'and severs the iron chains! Yet Grimgor’s',
+          'captains retreat up the spiral stair, forcing',
+          'the pursuit into the next castle ward!',
         ],
         queenQuote: st.story.reunionQuote,
         hint: st.flawlessStage
-          ? 'FLAWLESS CLEAR BONUS: +1 HEART & +2 DOUBLE ARROWS!'
-          : 'REWARD: +2 DOUBLE ARROWS & +1 GREAT ARROW!',
-        promptText: '▶ [SPACE] OR CLICK FOR NEXT CHAPTER',
+          ? 'FLAWLESS HONOUR BONUS: +1 ROYAL HEART & +2 DOUBLE ARROWS!'
+          : 'ROYAL QUIVER REWARD: +2 DOUBLE ARROWS & +1 GREAT ARROW!',
+        promptText: '▶ PRESS [SPACE] OR [ENTER] FOR NEXT WARD',
       },
       frameCount
     );
@@ -904,14 +903,14 @@ function renderPlayfield(): void {
         eyebrow: 'GRAND FINALE VICTORY • STAGE 15 CLEAR!',
         title: 'CASTLE ELDORIA LIBERATED!',
         lines: [
-          'Warlord Grimgor’s elite guard shatters!',
-          'Adrian reaches the Crown Spire Sanctum',
-          'and frees Queen Aurelia at last.',
-          'Peace returns to the realm of Eldoria!',
+          'Warlord Grimgor’s dread guard lies broken!',
+          'Adrian strides into the Crown Spire Sanctum',
+          'and restores Queen Aurelia to her throne.',
+          'Dawn and peace return to all Eldoria!',
         ],
         queenQuote: st.story.reunionQuote,
-        hint: 'UNLOCKED: STAGE 16+ ENDLESS INVASION MODE!',
-        promptText: '▶ [SPACE] OR CLICK FOR ENDLESS MODE',
+        hint: 'UNLOCKED: STAGE 16+ ENDLESS ROYAL DEFENCE!',
+        promptText: '▶ PRESS [SPACE] OR [ENTER] FOR ENDLESS MODE',
       },
       frameCount
     );
@@ -921,25 +920,25 @@ function renderPlayfield(): void {
     ctx.strokeStyle = '#ef4444';
     ctx.lineWidth = 2;
     ctx.strokeRect(12, 112, 216, 48);
-    ctx.font = 'bold 10px monospace';
+    ctx.font = 'bold 10px Georgia, serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#f87171';
-    ctx.fillText('ARROW MASTER FALLEN!', 120, 130);
-    ctx.font = 'bold 7.5px monospace';
+    ctx.fillStyle = '#fca5a5';
+    ctx.fillText('THE ARROW MASTER HAS FALLEN!', 120, 130);
+    ctx.font = 'bold 7.2px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = '#fde047';
-    ctx.fillText('REGROUPING AT SECTOR GATE...', 120, 148);
+    ctx.fillText('REGROUPING AT THE CASTLE GATE...', 120, 148);
     ctx.textAlign = 'left';
   } else if (st.status === 'paused') {
-    ctx.fillStyle = 'rgba(10, 14, 22, 0.88)';
+    ctx.fillStyle = 'rgba(10, 14, 24, 0.90)';
     ctx.fillRect(28, 118, 184, 44);
-    ctx.strokeStyle = '#3a8ee6';
+    ctx.strokeStyle = '#eab308';
     ctx.lineWidth = 2;
     ctx.strokeRect(28, 118, 184, 44);
-    ctx.font = 'bold 11px monospace';
+    ctx.font = 'bold 11px Georgia, serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#facc15';
-    ctx.fillText('GAME PAUSED', 120, 137);
-    ctx.font = '7.5px monospace';
+    ctx.fillStyle = '#fde047';
+    ctx.fillText('QUEST PAUSED', 120, 137);
+    ctx.font = 'bold 7.2px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = '#e2e8f0';
     ctx.fillText('PRESS [P] TO RESUME', 120, 152);
     ctx.textAlign = 'left';
@@ -951,6 +950,8 @@ function renderPlayfield(): void {
   ctx.fillRect(LOGICAL_WIDTH - 2, 0, 2, LOGICAL_HEIGHT);
   ctx.fillRect(0, 0, LOGICAL_WIDTH, 2);
   ctx.fillRect(0, LOGICAL_HEIGHT - 2, LOGICAL_WIDTH, 2);
+
+  ctx.restore();
 }
 
 // ============================================================================
@@ -1122,12 +1123,13 @@ function updateDevHook(): void {
   const st = engine.getState();
 
   const nextState: TownsaverDevHook = {
-    version: '2.0.0-arrow-master',
-    milestone: 4,
+    version: '2.1.0-arrow-master-hd',
+    milestone: 5,
     canvasReady: true,
     contextAcquired: true,
     width: LOGICAL_WIDTH,
     height: LOGICAL_HEIGHT,
+    renderScale: RENDER_SCALE,
     fps: currentFps,
     frameCount,
     activeWeapon,
@@ -1255,7 +1257,7 @@ function bootstrap(): void {
   renderPlayfield();
   updateDevHook();
   requestAnimationFrame(tick);
-  console.log('[Townsaver] v2.0 Arrow Master Story & 2D Castle Assault initialized on 240x320 canvas.');
+  console.log('[Townsaver] v2.1 HD Torchlit Castle & 4-Way Cardinal Aiming initialized on 960x1280 HiDPI canvas.');
 }
 
 if (document.readyState === 'loading') {
